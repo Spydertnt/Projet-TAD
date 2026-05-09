@@ -8,21 +8,9 @@
 -- CLUSTERS
 -- =========================
 
--- Cluster sur entities_id : co-localise les matériels d'une même entité
--- Optimise les jointures fréquentes (matériels + entité)
-CREATE CLUSTER CL_MATERIEL_ENTITY (entities_id NUMBER)
-    SIZE 8192
-    TABLESPACE TS_MATERIEL;
-
-CREATE INDEX idx_cl_materiel_entity ON CLUSTER CL_MATERIEL_ENTITY
-    TABLESPACE TS_INDEX;
-
--- Cluster hash pour les tables de référence (lookup par ID très fréquent)
-CREATE CLUSTER CL_ASSET_TYPES (id NUMBER)
-    SIZE 512
-    SINGLE TABLE
-    HASHKEYS 200
-    TABLESPACE TS_MATERIEL;
+-- Les clusters physiques doivent etre definis avant la creation des tables.
+-- Comme 02_schema_tables.sql cree deja les tables, ce script conserve
+-- uniquement les index executables et documente les optimisations retenues.
 
 -- =========================
 -- INDEX B-TREE (jointures et recherches par FK)

@@ -218,7 +218,8 @@ CREATE TABLE computers (
     CONSTRAINT fk_comp_model FOREIGN KEY (asset_models_id) REFERENCES asset_models(id),
     CONSTRAINT fk_comp_manuf FOREIGN KEY (manufacturers_id) REFERENCES manufacturers(id),
     CONSTRAINT fk_comp_state FOREIGN KEY (states_id) REFERENCES states(id),
-    CONSTRAINT fk_comp_net FOREIGN KEY (networks_id) REFERENCES networks(id)
+    CONSTRAINT fk_comp_net FOREIGN KEY (networks_id) REFERENCES networks(id),
+    CONSTRAINT uq_comp_entity_serial UNIQUE (entities_id, serial)
 ) TABLESPACE TS_MATERIEL;
 
 CREATE TABLE monitors (

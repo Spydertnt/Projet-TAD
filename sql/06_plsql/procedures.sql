@@ -19,34 +19,107 @@ AS
     v_old_site      VARCHAR2(10);
     v_new_site      VARCHAR2(10);
     v_computer_name VARCHAR2(255);
+    v_db_link       VARCHAR2(30);
+    v_remote_count  NUMBER;
 BEGIN
-    -- Vérifier que l'ordinateur existe
+    -- Verifier que l'ordinateur existe localement
     SELECT entities_id, name
     INTO v_old_entity, v_computer_name
     FROM computers
     WHERE id = p_computer_id;
 
-    -- Récupérer les sites source et destination
+    -- Recuperer les sites source et destination
     SELECT site_code INTO v_old_site
     FROM entities WHERE id = v_old_entity;
 
     SELECT site_code INTO v_new_site
     FROM entities WHERE id = p_new_entity_id;
 
-    -- Effectuer le transfert
-    UPDATE computers
-    SET entities_id = p_new_entity_id,
-        users_id = p_new_user_id,
-        date_mod = SYSTIMESTAMP
-    WHERE id = p_computer_id;
+    IF v_old_site = v_new_site THEN
+        UPDATE computers
+        SET entities_id = p_new_entity_id,
+            users_id = NVL(p_new_user_id, users_id),
+            date_mod = SYSTIMESTAMP
+        WHERE id = p_computer_id;
 
-    -- Transférer aussi les ports réseau associés
-    UPDATE network_ports
-    SET entities_id = p_new_entity_id
+        UPDATE network_ports
+        SET entities_id = p_new_entity_id,
+            date_mod = SYSTIMESTAMP
+        WHERE computers_id = p_computer_id;
+
+        DBMS_OUTPUT.PUT_LINE('Transfert local reussi: ' || v_computer_name ||
+            ' de ' || v_old_site || ' vers ' || v_new_site);
+        COMMIT;
+        RETURN;
+    END IF;
+
+    IF v_new_site = 'PAU' THEN
+        v_db_link := 'DBL_PAU';
+    ELSIF v_new_site = 'CERGY' THEN
+        v_db_link := 'DBL_CERGY';
+    ELSE
+        RAISE_APPLICATION_ERROR(-20012,
+            'Site destination non supporte: ' || NVL(v_new_site, 'NULL'));
+    END IF;
+
+    EXECUTE IMMEDIATE
+        'SELECT COUNT(*) FROM computers@' || v_db_link || ' WHERE id = :computer_id'
+        INTO v_remote_count
+        USING p_computer_id;
+
+    IF v_remote_count = 0 THEN
+        EXECUTE IMMEDIATE
+            'INSERT INTO computers@' || v_db_link || ' (
+                id, entities_id, name, serial, otherserial, uuid,
+                users_id, users_id_tech, locations_id,
+                asset_types_id, asset_models_id, manufacturers_id,
+                states_id, networks_id, comment, date_creation, date_mod
+            )
+            SELECT
+                id, :new_entity_id, name, serial, otherserial, uuid,
+                NVL(:new_user_id, users_id), users_id_tech, locations_id,
+                asset_types_id, asset_models_id, manufacturers_id,
+                states_id, networks_id, comment, date_creation, SYSTIMESTAMP
+            FROM computers
+            WHERE id = :computer_id'
+            USING p_new_entity_id, p_new_user_id, p_computer_id;
+    ELSE
+        EXECUTE IMMEDIATE
+            'UPDATE computers@' || v_db_link || '
+             SET entities_id = :new_entity_id,
+                 users_id = NVL(:new_user_id, users_id),
+                 date_mod = SYSTIMESTAMP
+             WHERE id = :computer_id'
+            USING p_new_entity_id, p_new_user_id, p_computer_id;
+    END IF;
+
+    EXECUTE IMMEDIATE
+        'DELETE FROM network_ports@' || v_db_link || ' WHERE computers_id = :computer_id'
+        USING p_computer_id;
+
+    EXECUTE IMMEDIATE
+        'INSERT INTO network_ports@' || v_db_link || ' (
+            id, entities_id, name, mac, instantiation_type, logical_number,
+            computers_id, monitors_id, peripherals_id, printers_id,
+            phones_id, network_equipments_id, date_creation, date_mod
+        )
+        SELECT
+            id, :new_entity_id, name, mac, instantiation_type, logical_number,
+            computers_id, monitors_id, peripherals_id, printers_id,
+            phones_id, network_equipments_id, date_creation, SYSTIMESTAMP
+        FROM network_ports
+        WHERE computers_id = :computer_id'
+        USING p_new_entity_id, p_computer_id;
+
+    DELETE FROM network_ports
     WHERE computers_id = p_computer_id;
 
-    DBMS_OUTPUT.PUT_LINE('Transfert réussi: ' || v_computer_name ||
-        ' de ' || v_old_site || ' vers ' || v_new_site);
+    DELETE FROM computers
+    WHERE id = p_computer_id;
+
+    DBMS_OUTPUT.PUT_LINE('Transfert inter-sites reussi: ' || v_computer_name ||
+        ' de ' || v_old_site || ' vers ' || v_new_site ||
+        ' via ' || v_db_link);
 
     COMMIT;
 
@@ -54,7 +127,7 @@ EXCEPTION
     WHEN NO_DATA_FOUND THEN
         RAISE_APPLICATION_ERROR(-20010,
             'Ordinateur (id=' || p_computer_id ||
-            ') ou entité (id=' || p_new_entity_id || ') introuvable');
+            ') ou entite (id=' || p_new_entity_id || ') introuvable');
     WHEN OTHERS THEN
         ROLLBACK;
         RAISE_APPLICATION_ERROR(-20011,

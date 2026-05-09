@@ -29,15 +29,18 @@
 -- 2. DATABASE LINKS
 -- =========================
 
+-- Avant execution SQL*Plus/SQLcl :
+-- DEFINE ADMIN_GLPI_PASSWORD = mot_de_passe_admin
+
 -- Depuis le site CERGY → accès au site PAU
 CREATE DATABASE LINK DBL_PAU
-    CONNECT TO admin_glpi IDENTIFIED BY AdminGlpi2026
+    CONNECT TO admin_glpi IDENTIFIED BY "&&ADMIN_GLPI_PASSWORD"
     USING 'XEPAU';
 
 -- Depuis le site PAU → accès au site CERGY
 -- (à exécuter sur l'instance de Pau)
 -- CREATE DATABASE LINK DBL_CERGY
---     CONNECT TO admin_glpi IDENTIFIED BY AdminGlpi2026
+--     CONNECT TO admin_glpi IDENTIFIED BY "&&ADMIN_GLPI_PASSWORD"
 --     USING 'XECERGY';
 
 -- Test du lien :
@@ -68,8 +71,9 @@ CREATE SYNONYM entities_pau FOR entities@DBL_PAU;
 -- - Site CERGY : entities.site_code = 'CERGY' → stocké sur instance Cergy
 -- - Site PAU   : entities.site_code = 'PAU'   → stocké sur instance Pau
 --
--- L'insertion est guidée par la procédure SP_TRANSFERT_MATERIEL
--- qui met à jour l'entities_id lors d'un transfert inter-sites.
+-- L'insertion est guidee par la procedure SP_TRANSFERT_MATERIEL.
+-- Pour un transfert inter-sites, elle copie l'ordinateur et ses ports
+-- directs via DB link, puis supprime les lignes locales transferees.
 
 -- =========================
 -- 5. TABLES RÉPLIQUÉES (référentiels communs)

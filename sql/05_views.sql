@@ -13,6 +13,7 @@ CREATE OR REPLACE VIEW V_INVENTAIRE_COMPLET AS
 SELECT
     'COMPUTER' AS type_materiel,
     c.id,
+    c.entities_id,
     c.name AS nom_materiel,
     c.serial AS numero_serie,
     e.name AS entite,
@@ -39,7 +40,7 @@ FROM computers c
 UNION ALL
 
 SELECT
-    'MONITOR', mo.id, mo.name, mo.serial,
+    'MONITOR', mo.id, mo.entities_id, mo.name, mo.serial,
     e.name, e.site_code,
     l.completename,
     u.realname || ' ' || u.firstname, NULL,
@@ -57,7 +58,7 @@ FROM monitors mo
 UNION ALL
 
 SELECT
-    'PERIPHERAL', p.id, p.name, p.serial,
+    'PERIPHERAL', p.id, p.entities_id, p.name, p.serial,
     e.name, e.site_code,
     l.completename,
     u.realname || ' ' || u.firstname, NULL,
@@ -74,7 +75,7 @@ FROM peripherals p
 UNION ALL
 
 SELECT
-    'PRINTER', pr.id, pr.name, pr.serial,
+    'PRINTER', pr.id, pr.entities_id, pr.name, pr.serial,
     e.name, e.site_code,
     l.completename,
     u.realname || ' ' || u.firstname, NULL,
@@ -91,7 +92,7 @@ FROM printers pr
 UNION ALL
 
 SELECT
-    'PHONE', ph.id, ph.name, ph.serial,
+    'PHONE', ph.id, ph.entities_id, ph.name, ph.serial,
     e.name, e.site_code,
     l.completename,
     u.realname || ' ' || u.firstname, NULL,
@@ -108,7 +109,7 @@ FROM phones ph
 UNION ALL
 
 SELECT
-    'NETWORK_EQUIPMENT', ne.id, ne.name, ne.serial,
+    'NETWORK_EQUIPMENT', ne.id, ne.entities_id, ne.name, ne.serial,
     e.name, e.site_code,
     l.completename,
     u.realname || ' ' || u.firstname, NULL,
@@ -130,14 +131,14 @@ FROM network_equipments ne
 
 CREATE OR REPLACE VIEW V_MATERIEL_PAR_SITE AS
 SELECT
-    e.site_code AS site,
-    e.name AS entite,
+    entities_id,
+    site,
+    entite,
     type_materiel,
     COUNT(*) AS nombre
 FROM V_INVENTAIRE_COMPLET v
-    JOIN entities e ON v.entite = e.name
-GROUP BY e.site_code, e.name, type_materiel
-ORDER BY e.site_code, type_materiel;
+GROUP BY entities_id, site, entite, type_materiel
+ORDER BY site, type_materiel;
 
 -- =========================
 -- V_UTILISATEURS_PROFILS
