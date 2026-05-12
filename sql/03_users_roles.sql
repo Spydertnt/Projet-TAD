@@ -8,6 +8,8 @@
 -- CRÉATION DES RÔLES
 -- =========================
 
+ALTER SESSION SET "_ORACLE_SCRIPT"=true;
+
 -- Administrateur : accès total
 CREATE ROLE ROLE_ADMIN;
 

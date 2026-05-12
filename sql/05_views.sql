@@ -4,6 +4,8 @@
 -- Oracle XE
 -- ============================================================
 
+SET SQLBLANKLINES ON
+
 -- =========================
 -- V_INVENTAIRE_COMPLET
 -- Vue consolidée de tous les matériels avec infos associées

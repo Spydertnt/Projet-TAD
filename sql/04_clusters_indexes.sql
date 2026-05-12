@@ -31,8 +31,8 @@ CREATE INDEX idx_users_entity ON users(entities_id)
     TABLESPACE TS_INDEX;
 CREATE INDEX idx_users_location ON users(locations_id)
     TABLESPACE TS_INDEX;
-CREATE INDEX idx_users_active ON users(is_active)
-    TABLESPACE TS_INDEX;
+-- CREATE INDEX idx_users_active ON users(is_active)
+--     TABLESPACE TS_INDEX;
 CREATE INDEX idx_pu_user ON profiles_users(users_id)
     TABLESPACE TS_INDEX;
 CREATE INDEX idx_pu_profile ON profiles_users(profiles_id)
@@ -51,8 +51,8 @@ CREATE INDEX idx_comp_user ON computers(users_id)
     TABLESPACE TS_INDEX;
 CREATE INDEX idx_comp_location ON computers(locations_id)
     TABLESPACE TS_INDEX;
-CREATE INDEX idx_comp_state ON computers(states_id)
-    TABLESPACE TS_INDEX;
+-- CREATE INDEX idx_comp_state ON computers(states_id)
+--     TABLESPACE TS_INDEX;
 CREATE INDEX idx_comp_manuf ON computers(manufacturers_id)
     TABLESPACE TS_INDEX;
 
@@ -107,8 +107,8 @@ CREATE INDEX idx_pu_entity_user ON profiles_users(entities_id, users_id)
     TABLESPACE TS_INDEX;
 
 -- VLANs par entité et tag
-CREATE INDEX idx_vlans_entity_tag ON vlans(entities_id, tag)
-    TABLESPACE TS_INDEX;
+-- CREATE INDEX idx_vlans_entity_tag ON vlans(entities_id, tag)
+--     TABLESPACE TS_INDEX;
 
 -- =========================
 -- INDEX FONCTIONNELS (recherche insensible à la casse)

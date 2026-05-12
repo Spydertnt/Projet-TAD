@@ -73,13 +73,13 @@ BEGIN
                 id, entities_id, name, serial, otherserial, uuid,
                 users_id, users_id_tech, locations_id,
                 asset_types_id, asset_models_id, manufacturers_id,
-                states_id, networks_id, comment, date_creation, date_mod
+                states_id, networks_id, notes, date_creation, date_mod
             )
             SELECT
                 id, :new_entity_id, name, serial, otherserial, uuid,
                 NVL(:new_user_id, users_id), users_id_tech, locations_id,
                 asset_types_id, asset_models_id, manufacturers_id,
-                states_id, networks_id, comment, date_creation, SYSTIMESTAMP
+                states_id, networks_id, notes, date_creation, SYSTIMESTAMP
             FROM computers
             WHERE id = :computer_id'
             USING p_new_entity_id, p_new_user_id, p_computer_id;
