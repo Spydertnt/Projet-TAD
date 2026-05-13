@@ -61,6 +61,9 @@ CREATE SYNONYM network_equipments_pau FOR network_equipments@DBL_PAU;
 CREATE SYNONYM users_pau FOR users@DBL_PAU;
 CREATE SYNONYM network_ports_pau FOR network_ports@DBL_PAU;
 CREATE SYNONYM entities_pau FOR entities@DBL_PAU;
+CREATE SYNONYM tickets_pau FOR tickets@DBL_PAU;
+CREATE SYNONYM ticket_followups_pau FOR ticket_followups@DBL_PAU;
+CREATE SYNONYM ticket_categories_pau FOR ticket_categories@DBL_PAU;
 
 -- =========================
 -- 4. FRAGMENTATION HORIZONTALE
@@ -129,6 +132,18 @@ BEGIN
         VALUES (src.id, src.category, src.name,
                 src.date_creation, src.date_mod);
 
+    -- Replication des categories de tickets
+    MERGE INTO ticket_categories@DBL_PAU dest
+    USING ticket_categories src ON (dest.id = src.id)
+    WHEN MATCHED THEN
+        UPDATE SET dest.name = src.name,
+                   dest.description = src.description,
+                   dest.date_mod = src.date_mod
+    WHEN NOT MATCHED THEN
+        INSERT (id, name, description, date_creation, date_mod)
+        VALUES (src.id, src.name, src.description,
+                src.date_creation, src.date_mod);
+
     -- Réplication des réseaux
     MERGE INTO networks@DBL_PAU dest
     USING networks src ON (dest.id = src.id)
@@ -188,6 +203,22 @@ SELECT 'PAU' AS site,
        (SELECT COUNT(*) FROM monitors@DBL_PAU) +
        (SELECT COUNT(*) FROM printers@DBL_PAU) AS total_materiel
 FROM DUAL;
+
+-- Vue globale des tickets support
+CREATE OR REPLACE VIEW V_TICKETS_GLOBAL AS
+SELECT t.id, t.title, t.status, t.priority, t.requester_users_id,
+       t.assigned_users_id, t.assigned_groups_id, t.date_creation,
+       e.name AS entite, 'CERGY' AS source_site
+FROM tickets t
+    JOIN entities e ON t.entities_id = e.id
+WHERE e.site_code = 'CERGY'
+UNION ALL
+SELECT t.id, t.title, t.status, t.priority, t.requester_users_id,
+       t.assigned_users_id, t.assigned_groups_id, t.date_creation,
+       e.name AS entite, 'PAU' AS source_site
+FROM tickets@DBL_PAU t
+    JOIN entities@DBL_PAU e ON t.entities_id = e.id
+WHERE e.site_code = 'PAU';
 
 -- =========================
 -- 7. REQUÊTE DISTRIBUÉE EXEMPLE

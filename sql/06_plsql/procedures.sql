@@ -196,6 +196,95 @@ END SP_AFFECTER_PROFIL;
 /
 
 -- =========================
+-- SP_CREER_TICKET_MATERIEL
+-- Cree un ticket et l'envoie au groupe IT indique
+-- =========================
+
+CREATE OR REPLACE PROCEDURE SP_CREER_TICKET_MATERIEL (
+    p_entity_id         IN NUMBER,
+    p_requester_id      IN NUMBER,
+    p_title             IN VARCHAR2,
+    p_description       IN CLOB,
+    p_asset_type        IN VARCHAR2,
+    p_asset_id          IN NUMBER,
+    p_priority          IN VARCHAR2 DEFAULT 'MOYENNE',
+    p_category_id       IN NUMBER DEFAULT NULL,
+    p_assigned_group_id IN NUMBER DEFAULT NULL,
+    p_ticket_id         OUT NUMBER
+)
+AS
+    v_asset_count NUMBER;
+    v_asset_type  VARCHAR2(50) := UPPER(p_asset_type);
+BEGIN
+    CASE v_asset_type
+        WHEN 'COMPUTER' THEN
+            SELECT COUNT(*) INTO v_asset_count
+            FROM computers
+            WHERE id = p_asset_id AND entities_id = p_entity_id;
+        WHEN 'MONITOR' THEN
+            SELECT COUNT(*) INTO v_asset_count
+            FROM monitors
+            WHERE id = p_asset_id AND entities_id = p_entity_id;
+        WHEN 'PERIPHERAL' THEN
+            SELECT COUNT(*) INTO v_asset_count
+            FROM peripherals
+            WHERE id = p_asset_id AND entities_id = p_entity_id;
+        WHEN 'PRINTER' THEN
+            SELECT COUNT(*) INTO v_asset_count
+            FROM printers
+            WHERE id = p_asset_id AND entities_id = p_entity_id;
+        WHEN 'PHONE' THEN
+            SELECT COUNT(*) INTO v_asset_count
+            FROM phones
+            WHERE id = p_asset_id AND entities_id = p_entity_id;
+        WHEN 'NETWORK_EQUIPMENT' THEN
+            SELECT COUNT(*) INTO v_asset_count
+            FROM network_equipments
+            WHERE id = p_asset_id AND entities_id = p_entity_id;
+        ELSE
+            RAISE_APPLICATION_ERROR(-20050,
+                'Type de materiel non supporte: ' || p_asset_type);
+    END CASE;
+
+    IF v_asset_count = 0 THEN
+        RAISE_APPLICATION_ERROR(-20051,
+            'Materiel introuvable dans l''entite indiquee');
+    END IF;
+
+    INSERT INTO tickets (
+        entities_id, title, description, priority,
+        requester_users_id, ticket_categories_id, assigned_groups_id,
+        computers_id, monitors_id, peripherals_id, printers_id,
+        phones_id, network_equipments_id, status, date_assigned
+    )
+    VALUES (
+        p_entity_id, p_title, p_description, UPPER(p_priority),
+        p_requester_id, p_category_id, p_assigned_group_id,
+        CASE WHEN v_asset_type = 'COMPUTER' THEN p_asset_id END,
+        CASE WHEN v_asset_type = 'MONITOR' THEN p_asset_id END,
+        CASE WHEN v_asset_type = 'PERIPHERAL' THEN p_asset_id END,
+        CASE WHEN v_asset_type = 'PRINTER' THEN p_asset_id END,
+        CASE WHEN v_asset_type = 'PHONE' THEN p_asset_id END,
+        CASE WHEN v_asset_type = 'NETWORK_EQUIPMENT' THEN p_asset_id END,
+        CASE WHEN p_assigned_group_id IS NULL THEN 'NOUVEAU' ELSE 'ASSIGNE' END,
+        CASE WHEN p_assigned_group_id IS NULL THEN NULL ELSE SYSTIMESTAMP END
+    )
+    RETURNING id INTO p_ticket_id;
+
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Ticket cree et envoye au service IT: #' || p_ticket_id);
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20052,
+            'Erreur creation ticket: ' || SQLERRM);
+END SP_CREER_TICKET_MATERIEL;
+/
+
+GRANT EXECUTE ON SP_CREER_TICKET_MATERIEL
+    TO ROLE_TECHNICIEN, ROLE_MANAGER_SITE, ROLE_ADMIN;
+
+-- =========================
 -- SP_INVENTAIRE_SITE
 -- Génère un rapport d'inventaire complet pour un site
 -- =========================

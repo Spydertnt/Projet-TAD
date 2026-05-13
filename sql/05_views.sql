@@ -239,3 +239,50 @@ SELECT *
 FROM V_INVENTAIRE_COMPLET
 WHERE date_mod >= SYSTIMESTAMP - INTERVAL '30' DAY
 ORDER BY date_mod DESC;
+
+-- =========================
+-- V_TICKETS_SUPPORT
+-- Suivi des tickets envoyes au service IT
+-- =========================
+
+CREATE OR REPLACE VIEW V_TICKETS_SUPPORT AS
+SELECT
+    t.id AS ticket_id,
+    t.title AS titre,
+    t.status AS statut,
+    t.priority AS priorite,
+    t.urgency AS urgence,
+    t.impact,
+    tc.name AS categorie,
+    e.name AS entite,
+    e.site_code AS site,
+    req.realname || ' ' || req.firstname AS demandeur,
+    tech.realname || ' ' || tech.firstname AS technicien,
+    g.name AS groupe_it,
+    CASE
+        WHEN t.computers_id IS NOT NULL THEN 'COMPUTER'
+        WHEN t.monitors_id IS NOT NULL THEN 'MONITOR'
+        WHEN t.peripherals_id IS NOT NULL THEN 'PERIPHERAL'
+        WHEN t.printers_id IS NOT NULL THEN 'PRINTER'
+        WHEN t.phones_id IS NOT NULL THEN 'PHONE'
+        WHEN t.network_equipments_id IS NOT NULL THEN 'NETWORK_EQUIPMENT'
+    END AS type_materiel,
+    COALESCE(c.name, mo.name, p.name, pr.name, ph.name, ne.name) AS nom_materiel,
+    COALESCE(c.serial, mo.serial, p.serial, pr.serial, ph.serial, ne.serial) AS numero_serie,
+    t.date_creation,
+    t.date_mod,
+    t.date_assigned,
+    t.date_resolved,
+    t.date_closed
+FROM tickets t
+    JOIN entities e ON t.entities_id = e.id
+    JOIN users req ON t.requester_users_id = req.id
+    LEFT JOIN users tech ON t.assigned_users_id = tech.id
+    LEFT JOIN groups g ON t.assigned_groups_id = g.id
+    LEFT JOIN ticket_categories tc ON t.ticket_categories_id = tc.id
+    LEFT JOIN computers c ON t.computers_id = c.id
+    LEFT JOIN monitors mo ON t.monitors_id = mo.id
+    LEFT JOIN peripherals p ON t.peripherals_id = p.id
+    LEFT JOIN printers pr ON t.printers_id = pr.id
+    LEFT JOIN phones ph ON t.phones_id = ph.id
+    LEFT JOIN network_equipments ne ON t.network_equipments_id = ne.id;

@@ -41,6 +41,32 @@ BEGIN
 END;
 /
 
+CREATE OR REPLACE TRIGGER TRG_AUTO_DATE_MOD_TICKETS
+BEFORE UPDATE ON tickets
+FOR EACH ROW
+BEGIN
+    :NEW.date_mod := SYSTIMESTAMP;
+
+    IF :OLD.status = 'NOUVEAU'
+       AND :NEW.status IN ('ASSIGNE', 'EN_COURS')
+       AND :NEW.date_assigned IS NULL THEN
+        :NEW.date_assigned := SYSTIMESTAMP;
+    END IF;
+
+    IF :OLD.status != 'RESOLU'
+       AND :NEW.status = 'RESOLU'
+       AND :NEW.date_resolved IS NULL THEN
+        :NEW.date_resolved := SYSTIMESTAMP;
+    END IF;
+
+    IF :OLD.status != 'CLOS'
+       AND :NEW.status = 'CLOS'
+       AND :NEW.date_closed IS NULL THEN
+        :NEW.date_closed := SYSTIMESTAMP;
+    END IF;
+END;
+/
+
 -- =========================
 -- TRG_AUDIT_COMPUTERS
 -- Log automatique de toutes les modifications sur computers

@@ -141,14 +141,18 @@ SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(
 -- ALTER INDEX idx_comp_entity INVISIBLE;
 -- ALTER INDEX idx_comp_entity_state INVISIBLE;
 -- ALTER INDEX idx_comp_name_upper INVISIBLE;
+-- ALTER INDEX idx_ticket_entity_status_priority INVISIBLE;
+-- ALTER INDEX idx_ticket_assigned_group INVISIBLE;
 
--- Étape 2 : Exécuter les requêtes Q1, Q2 et noter le coût
+-- Étape 2 : Exécuter les requêtes Q1, Q2, Q9 et noter le coût
 -- (full table scan attendu)
 
 -- Étape 3 : Rendre les index visibles
 -- ALTER INDEX idx_comp_entity VISIBLE;
 -- ALTER INDEX idx_comp_entity_state VISIBLE;
 -- ALTER INDEX idx_comp_name_upper VISIBLE;
+-- ALTER INDEX idx_ticket_entity_status_priority VISIBLE;
+-- ALTER INDEX idx_ticket_assigned_group VISIBLE;
 
 -- Étape 4 : Relancer les mêmes requêtes et comparer
 -- (index scan attendu → coût réduit)
@@ -164,3 +168,41 @@ SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(
 -- | Operation          | TABLE ACCESS FULL vs INDEX RANGE SCAN    |
 -- | Predicate Info     | Filtres et conditions de jointure        |
 -- | Time               | Temps estimé d'exécution                 |
+-- =========================
+-- REQUETE 8 : Topologie reseau complete (via la vue)
+-- Mesure du cout de la vue V_TOPOLOGIE_RESEAU
+-- =========================
+
+EXPLAIN PLAN SET STATEMENT_ID = 'Q8_VIEW_TOPOLOGIE' FOR
+SELECT port_id, nom_port, mac, type_port, equipement,
+       type_equipement, entite, site, vlan_name, adresse_ip
+FROM V_TOPOLOGIE_RESEAU
+WHERE site = 'CERGY';
+
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(
+    NULL, 'Q8_VIEW_TOPOLOGIE', 'ALL'));
+
+-- =========================
+-- REQUETE 9 : Tickets ouverts envoyes au service IT
+-- Requete helpdesk frequente : site + statut + priorite
+-- =========================
+
+EXPLAIN PLAN SET STATEMENT_ID = 'Q9_TICKETS_SUPPORT' FOR
+SELECT
+    t.ticket_id,
+    t.titre,
+    t.statut,
+    t.priorite,
+    t.demandeur,
+    t.groupe_it,
+    t.type_materiel,
+    t.nom_materiel,
+    t.date_creation
+FROM V_TICKETS_SUPPORT t
+WHERE t.site = 'CERGY'
+  AND t.statut IN ('NOUVEAU', 'ASSIGNE', 'EN_COURS')
+  AND t.priorite IN ('HAUTE', 'CRITIQUE')
+ORDER BY t.date_creation DESC;
+
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(
+    NULL, 'Q9_TICKETS_SUPPORT', 'ALL'));

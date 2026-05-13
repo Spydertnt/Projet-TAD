@@ -70,6 +70,26 @@ CREATE INDEX idx_pho_entity ON phones(entities_id)
 CREATE INDEX idx_neq_entity ON network_equipments(entities_id)
     TABLESPACE TS_INDEX;
 
+-- === SUPPORT / TICKETS ===
+CREATE INDEX idx_ticket_entity ON tickets(entities_id)
+    TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_status ON tickets(status)
+    TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_requester ON tickets(requester_users_id)
+    TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_assigned_user ON tickets(assigned_users_id)
+    TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_assigned_group ON tickets(assigned_groups_id)
+    TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_category ON tickets(ticket_categories_id)
+    TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_comp ON tickets(computers_id)
+    TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_pri ON tickets(printers_id)
+    TABLESPACE TS_INDEX;
+CREATE INDEX idx_tf_ticket ON ticket_followups(tickets_id)
+    TABLESPACE TS_INDEX;
+
 -- === RÉSEAU ===
 CREATE INDEX idx_np_entity ON network_ports(entities_id)
     TABLESPACE TS_INDEX;
@@ -104,6 +124,10 @@ CREATE INDEX idx_comp_entity_user ON computers(entities_id, users_id)
 
 -- Profils utilisateurs par entité
 CREATE INDEX idx_pu_entity_user ON profiles_users(entities_id, users_id)
+    TABLESPACE TS_INDEX;
+
+-- Suivi des tickets par site, statut et priorite
+CREATE INDEX idx_ticket_entity_status_priority ON tickets(entities_id, status, priority)
     TABLESPACE TS_INDEX;
 
 -- VLANs par entité et tag

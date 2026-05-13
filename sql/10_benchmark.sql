@@ -55,7 +55,7 @@ END SP_BENCHMARK_QUERY;
 -- REQUETES DE BENCHMARK
 -- =========================
 
--- Les 8 requetes a tester
+-- Les 9 requetes a tester
 -- Q1: Recherche par nom (index fonctionnel UPPER)
 -- Q2: Inventaire site complet (index composite)
 -- Q3: Stats VLAN agregees (jointures multiples + GROUP BY)
@@ -64,6 +64,7 @@ END SP_BENCHMARK_QUERY;
 -- Q6: Utilisateurs avec profils (jointures 4 tables)
 -- Q7: Comptage materiel par fabricant et site (GROUP BY)
 -- Q8: Topologie reseau complete (vue 7+ jointures)
+-- Q9: Tickets ouverts envoyes au service IT (vue support + index tickets)
 
 -- =========================
 -- SCENARIO A : SANS INDEX (index INVISIBLE)
@@ -100,6 +101,15 @@ BEGIN
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_npv_vlan INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_entities_site INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_vlans_entity_tag INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_entity INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_status INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_requester INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_assigned_group INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_category INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_comp INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_pri INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_tf_ticket INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_entity_status_priority INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
 
     -- Vider le cache
     BEGIN EXECUTE IMMEDIATE 'ALTER SYSTEM FLUSH BUFFER_CACHE'; EXCEPTION WHEN OTHERS THEN NULL; END;
@@ -168,6 +178,14 @@ BEGIN
          FROM V_TOPOLOGIE_RESEAU
          WHERE site = ''CERGY''');
 
+    SP_BENCHMARK_QUERY('Q9', 'Tickets ouverts support IT', 'SANS_INDEX',
+        'SELECT ticket_id, titre, statut, priorite, demandeur,
+                groupe_it, type_materiel, nom_materiel, date_creation
+         FROM V_TICKETS_SUPPORT
+         WHERE site = ''CERGY''
+           AND statut IN (''NOUVEAU'', ''ASSIGNE'', ''EN_COURS'')
+           AND priorite IN (''HAUTE'', ''CRITIQUE'')');
+
     DBMS_OUTPUT.PUT_LINE('============================================');
     DBMS_OUTPUT.PUT_LINE('  FIN SCENARIO A');
     DBMS_OUTPUT.PUT_LINE('============================================');
@@ -209,6 +227,15 @@ BEGIN
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_npv_vlan VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_entities_site VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_vlans_entity_tag VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_entity VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_status VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_requester VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_assigned_group VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_category VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_comp VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_pri VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_tf_ticket VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_entity_status_priority VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
 
     -- Vider le cache
     BEGIN EXECUTE IMMEDIATE 'ALTER SYSTEM FLUSH BUFFER_CACHE'; EXCEPTION WHEN OTHERS THEN NULL; END;
@@ -276,6 +303,14 @@ BEGIN
                 type_equipement, entite, site, vlan_name, adresse_ip
          FROM V_TOPOLOGIE_RESEAU
          WHERE site = ''CERGY''');
+
+    SP_BENCHMARK_QUERY('Q9', 'Tickets ouverts support IT', 'AVEC_INDEX',
+        'SELECT ticket_id, titre, statut, priorite, demandeur,
+                groupe_it, type_materiel, nom_materiel, date_creation
+         FROM V_TICKETS_SUPPORT
+         WHERE site = ''CERGY''
+           AND statut IN (''NOUVEAU'', ''ASSIGNE'', ''EN_COURS'')
+           AND priorite IN (''HAUTE'', ''CRITIQUE'')');
 
     DBMS_OUTPUT.PUT_LINE('============================================');
     DBMS_OUTPUT.PUT_LINE('  FIN SCENARIO B');

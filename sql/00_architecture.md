@@ -35,8 +35,8 @@ La nouvelle architecture remplace la BDD monolithique MySQL de GLPI par une **ar
 |---|---|---|
 | 1 | Aucune FK | FK explicites sur toutes les relations |
 | 2 | Polymorphisme `itemtype`/`items_id` | FK classiques (une colonne par type) + CHECK |
-| 3 | Pas de tablespaces | 5 tablespaces dédiés |
-| 4 | Pas de vues | 6 vues métier |
+| 3 | Pas de tablespaces | 6 tablespaces dédiés |
+| 4 | Pas de vues | 7 vues métier |
 | 5 | Pas de PL/SQL | Triggers, curseurs, procédures, fonctions |
 | 6 | Base monolithique | BDDR avec DB Links entre Cergy et Pau |
 | 7 | Tables types redondantes | Consolidation en `asset_types` / `asset_models` |
@@ -73,6 +73,11 @@ La nouvelle architecture remplace la BDD monolithique MySQL de GLPI par une **ar
 - `phones` (id, entities_id→entities, name, serial, ...)
 - `network_equipments` (id, entities_id→entities, name, serial, ram, ...)
 
+### Tables support / tickets (3)
+- `ticket_categories` (id, name, description)
+- `tickets` (id, entities_id→entities, requester_users_id→users, assigned_groups_id→groups, ...)
+- `ticket_followups` (id, tickets_id→tickets, users_id→users, content)
+
 ### Tables réseau (10)
 - `fqdns` (id, entities_id→entities, name, fqdn)
 - `network_ports` (id, entities_id→entities, computers_id, printers_id, ..., mac)
@@ -90,7 +95,7 @@ La nouvelle architecture remplace la BDD monolithique MySQL de GLPI par une **ar
 - `audit_log` (id, table_name, record_id, action, old_values, new_values)
 - `archives_materiel` (id, source_table, source_id, data)
 
-**Total : 33 tables** (vs ~30 GLPI dans le périmètre, mais avec intégrité garantie)
+**Total : 36 tables** (vs ~30 GLPI dans le périmètre, mais avec intégrité garantie)
 
 ## 4. Stratégie de distribution (BDDR)
 
@@ -98,6 +103,7 @@ La nouvelle architecture remplace la BDD monolithique MySQL de GLPI par une **ar
 |---|---|---|
 | Matériels | **Fragmentation horizontale** | Chaque site stocke ses propres matériels |
 | Utilisateurs | **Fragmentation horizontale** | Comptes locaux à chaque site |
+| Tickets | **Fragmentation horizontale** | Tickets traités par le service IT du site concerné |
 | Référentiels | **Réplication** | Types, modèles, fabricants identiques partout |
 | Réseau | **Fragmentation horizontale** | Infrastructure locale à chaque site |
 

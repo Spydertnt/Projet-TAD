@@ -183,6 +183,17 @@ BEGIN
     EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL;
     END;
 
+    -- Categories de tickets support
+    BEGIN
+        INSERT INTO ticket_categories (name, description)
+        VALUES ('Incident materiel', 'Panne ou dysfonctionnement sur un equipement');
+        INSERT INTO ticket_categories (name, description)
+        VALUES ('Demande assistance', 'Besoin d''aide ou de diagnostic');
+        INSERT INTO ticket_categories (name, description)
+        VALUES ('Maintenance preventive', 'Intervention planifiee sur le parc');
+    EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL;
+    END;
+
     -- =====================
     -- 6. TITRES ET CATEGORIES UTILISATEURS
     -- =====================
@@ -224,6 +235,9 @@ BEGIN
             INSERT INTO entities (name, hier_level, site_code, completename)
             VALUES ('CY Tech ' || v_site, 1, v_site, 'CY Tech ' || v_site)
             RETURNING id INTO v_root_entity;
+
+            INSERT INTO groups (entities_id, name, completename)
+            VALUES (v_root_entity, 'Service IT ' || v_site, 'CY Tech ' || v_site || ' > Service IT');
 
             -- Departements
             FOR d IN 1..v_depts.COUNT LOOP
@@ -502,6 +516,114 @@ BEGIN
             DBMS_OUTPUT.PUT_LINE(v_site || ': 40 equipements reseau crees');
 
             -- =====================
+            -- TICKETS SUPPORT (120 par site)
+            -- =====================
+            FOR i IN 1..120 LOOP
+                DECLARE
+                    v_ent_id NUMBER;
+                    v_asset_id NUMBER;
+                    v_requester_id NUMBER;
+                    v_group_id NUMBER;
+                    v_cat_id NUMBER;
+                    v_status VARCHAR2(30);
+                    v_priority VARCHAR2(20);
+                BEGIN
+                    IF MOD(i, 4) = 0 THEN
+                        SELECT pr.id, pr.entities_id INTO v_asset_id, v_ent_id
+                        FROM (
+                            SELECT pr.id, pr.entities_id
+                            FROM printers pr
+                            JOIN entities e ON pr.entities_id = e.id
+                            WHERE e.site_code = v_site
+                            ORDER BY DBMS_RANDOM.VALUE
+                        ) pr
+                        WHERE ROWNUM = 1;
+                    ELSE
+                        SELECT c.id, c.entities_id INTO v_asset_id, v_ent_id
+                        FROM (
+                            SELECT c.id, c.entities_id
+                            FROM computers c
+                            JOIN entities e ON c.entities_id = e.id
+                            WHERE e.site_code = v_site
+                            ORDER BY DBMS_RANDOM.VALUE
+                        ) c
+                        WHERE ROWNUM = 1;
+                    END IF;
+
+                    SELECT u.id INTO v_requester_id
+                    FROM (
+                        SELECT u.id
+                        FROM users u
+                        JOIN entities e ON u.entities_id = e.id
+                        WHERE e.site_code = v_site AND u.is_active = 1
+                        ORDER BY DBMS_RANDOM.VALUE
+                    ) u
+                    WHERE ROWNUM = 1;
+
+                    SELECT g.id INTO v_group_id
+                    FROM groups g
+                    JOIN entities e ON g.entities_id = e.id
+                    WHERE e.site_code = v_site AND g.name = 'Service IT ' || v_site
+                    AND ROWNUM = 1;
+
+                    SELECT id INTO v_cat_id
+                    FROM (
+                        SELECT id FROM ticket_categories
+                        ORDER BY DBMS_RANDOM.VALUE
+                    )
+                    WHERE ROWNUM = 1;
+
+                    v_status := CASE MOD(i, 6)
+                        WHEN 0 THEN 'NOUVEAU'
+                        WHEN 1 THEN 'ASSIGNE'
+                        WHEN 2 THEN 'EN_COURS'
+                        WHEN 3 THEN 'EN_ATTENTE'
+                        WHEN 4 THEN 'RESOLU'
+                        ELSE 'CLOS'
+                    END;
+
+                    v_priority := CASE MOD(i, 4)
+                        WHEN 0 THEN 'BASSE'
+                        WHEN 1 THEN 'MOYENNE'
+                        WHEN 2 THEN 'HAUTE'
+                        ELSE 'CRITIQUE'
+                    END;
+
+                    IF MOD(i, 4) = 0 THEN
+                        INSERT INTO tickets (entities_id, title, description,
+                            status, priority, requester_users_id,
+                            assigned_groups_id, ticket_categories_id, printers_id,
+                            date_assigned, date_resolved, date_closed)
+                        VALUES (v_ent_id,
+                            'Incident imprimante ' || v_site || ' #' || i,
+                            'Probleme signale sur une imprimante du site ' || v_site,
+                            v_status, v_priority, v_requester_id,
+                            v_group_id, v_cat_id, v_asset_id,
+                            CASE WHEN v_status != 'NOUVEAU' THEN SYSTIMESTAMP ELSE NULL END,
+                            CASE WHEN v_status IN ('RESOLU','CLOS') THEN SYSTIMESTAMP ELSE NULL END,
+                            CASE WHEN v_status = 'CLOS' THEN SYSTIMESTAMP ELSE NULL END);
+                    ELSE
+                        INSERT INTO tickets (entities_id, title, description,
+                            status, priority, requester_users_id,
+                            assigned_groups_id, ticket_categories_id, computers_id,
+                            date_assigned, date_resolved, date_closed)
+                        VALUES (v_ent_id,
+                            'Incident ordinateur ' || v_site || ' #' || i,
+                            'Probleme signale sur un ordinateur du site ' || v_site,
+                            v_status, v_priority, v_requester_id,
+                            v_group_id, v_cat_id, v_asset_id,
+                            CASE WHEN v_status != 'NOUVEAU' THEN SYSTIMESTAMP ELSE NULL END,
+                            CASE WHEN v_status IN ('RESOLU','CLOS') THEN SYSTIMESTAMP ELSE NULL END,
+                            CASE WHEN v_status = 'CLOS' THEN SYSTIMESTAMP ELSE NULL END);
+                    END IF;
+                EXCEPTION WHEN OTHERS THEN NULL;
+                END;
+                IF MOD(i, 40) = 0 THEN COMMIT; END IF;
+            END LOOP;
+            COMMIT;
+            DBMS_OUTPUT.PUT_LINE(v_site || ': 120 tickets support crees');
+
+            -- =====================
             -- VLANs (10 par site)
             -- =====================
             FOR i IN 1..v_vlan_names.COUNT LOOP
@@ -577,12 +699,14 @@ BEGIN
         SELECT 'entities' AS t, COUNT(*) AS c FROM entities UNION ALL
         SELECT 'locations', COUNT(*) FROM locations UNION ALL
         SELECT 'users', COUNT(*) FROM users UNION ALL
+        SELECT 'groups', COUNT(*) FROM groups UNION ALL
         SELECT 'computers', COUNT(*) FROM computers UNION ALL
         SELECT 'monitors', COUNT(*) FROM monitors UNION ALL
         SELECT 'peripherals', COUNT(*) FROM peripherals UNION ALL
         SELECT 'printers', COUNT(*) FROM printers UNION ALL
         SELECT 'phones', COUNT(*) FROM phones UNION ALL
         SELECT 'network_equipments', COUNT(*) FROM network_equipments UNION ALL
+        SELECT 'tickets', COUNT(*) FROM tickets UNION ALL
         SELECT 'network_ports', COUNT(*) FROM network_ports UNION ALL
         SELECT 'vlans', COUNT(*) FROM vlans
     ) LOOP

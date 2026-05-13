@@ -26,14 +26,15 @@ Ce projet réalise le **reverse engineering** de la base de données du logiciel
 │   TS_MATERIEL           Fragmentation    TS_MATERIEL      │
 │   TS_UTILISATEURS       horizontale      TS_UTILISATEURS  │
 │   TS_RESEAU             + réplication    TS_RESEAU        │
-│   TS_INDEX              référentiels     TS_INDEX         │
+│   TS_SUPPORT            référentiels     TS_SUPPORT       │
+│   TS_INDEX                                TS_INDEX         │
 └─────────────────────────────────────────────────┘
 ```
 
-- **33 tables** (vs ~30 GLPI dans le périmètre) avec FK explicites
-- **5 tablespaces** dédiés (matériel, utilisateurs, réseau, index, temporaire)
-- **6 vues métier** pour l'accès simplifié aux données
-- **22 index** (B-tree, composites, fonctionnels, bitmap)
+- **36 tables** (vs ~30 GLPI dans le périmètre) avec FK explicites
+- **6 tablespaces** dédiés (matériel, utilisateurs, réseau, support, index, temporaire)
+- **7 vues métier** pour l'accès simplifié aux données
+- **53 index** (B-tree, composites, fonctionnels, bitmap)
 - **PL/SQL complet** : triggers, procédures, fonctions, curseurs
 - **BDDR** : DB Links, synonymes, vues distribuées, réplication
 
@@ -52,13 +53,13 @@ Projet-TAD/
 └── sql/
     ├── 00_architecture.md            # Documentation technique
     ├── 01_tablespaces.sql            # Création des tablespaces
-    ├── 02_schema_tables.sql          # 33 tables avec FK explicites
+    ├── 02_schema_tables.sql          # 36 tables avec FK explicites
     ├── 03_users_roles.sql            # Utilisateurs, rôles, privilèges Oracle
-    ├── 04_clusters_indexes.sql       # 22 index (B-tree, composite, bitmap)
-    ├── 05_views.sql                  # 6 vues métier
+    ├── 04_clusters_indexes.sql       # 53 index (B-tree, composite, bitmap)
+    ├── 05_views.sql                  # 7 vues métier
     ├── 06_plsql/
-    │   ├── triggers.sql              # 7 triggers (audit, validation, cascade)
-    │   ├── procedures.sql            # 4 procédures stockées
+    │   ├── triggers.sql              # 8 triggers (audit, validation, cascade)
+    │   ├── procedures.sql            # 5 procédures stockées
     │   ├── functions.sql             # 4 fonctions
     │   └── cursors.sql               # 4 curseurs (explicite, FOR, REF)
     ├── 07_bddr.sql                   # DB Links, synonymes, vues distribuées
@@ -98,7 +99,7 @@ Projet-TAD/
 
 | Métrique | Valeur |
 |---|---|
-| Lignes générées | ~20 840 |
+| Lignes générées | ~21 100 |
 | Gain moyen | **62%** |
 | Gain maximum | **94%** (recherches indexées) |
 | Requêtes testées | 8 |

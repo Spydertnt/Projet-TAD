@@ -124,13 +124,14 @@ La nouvelle architecture résout les 9 problèmes identifiés en appliquant les 
 
 ### 3.2 Tablespaces
 
-5 tablespaces ont été définis pour séparer physiquement les données par domaine :
+6 tablespaces ont été définis pour séparer physiquement les données par domaine :
 
 | Tablespace | Taille initiale | Auto-extension | Contenu |
 |---|---|---|---|
 | `TS_MATERIEL` | 100 Mo | +50 Mo → 1 Go | Tables matériels, entités, référentiels |
 | `TS_UTILISATEURS` | 50 Mo | +25 Mo → 500 Mo | Tables utilisateurs, profils, groupes |
 | `TS_RESEAU` | 100 Mo | +50 Mo → 1 Go | Tables réseau, ports, VLANs, IP |
+| `TS_SUPPORT` | 50 Mo | +25 Mo → 500 Mo | Tickets, suivis et catégories support |
 | `TS_INDEX` | 100 Mo | +50 Mo → 1 Go | Tous les index |
 | `TS_TEMP_GLPI` | 50 Mo | +25 Mo → 500 Mo | Tablespace temporaire dédié |
 
@@ -138,7 +139,7 @@ La nouvelle architecture résout les 9 problèmes identifiés en appliquant les 
 
 > Script : [`01_tablespaces.sql`](../sql/01_tablespaces.sql)
 
-### 3.3 Schéma des tables (33 tables)
+### 3.3 Schéma des tables (36 tables)
 
 #### Tables transversales (7)
 
@@ -170,6 +171,12 @@ Toutes partagent un pattern commun avec FK vers `entities`, `users`, `locations`
 
 Contrainte notable : `UNIQUE (entities_id, serial)` sur `computers` pour empêcher les doublons de numéro de série par entité.
 
+#### Tables support / tickets (3)
+
+- **`ticket_categories`** — Catégories fonctionnelles des demandes support
+- **`tickets`** — Tickets d'incident liés à une entité, un demandeur, un groupe IT et exactement un matériel
+- **`ticket_followups`** — Échanges et suivis rattachés aux tickets
+
 #### Tables réseau (10)
 
 - **`network_ports`** — Résolution du polymorphisme GLPI : 6 colonnes FK nullable (`computers_id`, `monitors_id`, etc.) avec contrainte CHECK garantissant **exactement un parent**
@@ -200,22 +207,23 @@ Contrainte notable : `UNIQUE (entities_id, serial)` sur `computers` pour empêch
 6 utilisateurs Oracle créés avec des **quotas** sur les tablespaces adaptés à leur rôle :
 
 - `admin_glpi` — Quota illimité sur tous les tablespaces
-- `tech_cergy`, `tech_pau` — 100 Mo matériel + 50 Mo réseau
+- `tech_cergy`, `tech_pau` — 100 Mo matériel + 50 Mo réseau + 50 Mo support
 - `consultant` — Aucun quota (lecture seule)
-- `manager_cergy`, `manager_pau` — 200 Mo matériel + 100 Mo utilisateurs + 100 Mo réseau
+- `manager_cergy`, `manager_pau` — 200 Mo matériel + 100 Mo utilisateurs + 100 Mo réseau + 50 Mo support
 
 > Script : [`03_users_roles.sql`](../sql/03_users_roles.sql)
 
 ### 3.5 Index et optimisation
 
-22 index répartis en 4 catégories :
+53 index répartis en 5 catégories :
 
 | Type d'index | Nombre | Exemples | Justification |
 |---|---|---|---|
-| **B-tree simple** | 13 | `idx_comp_entity`, `idx_np_computer` | Jointures par FK |
-| **Composite** | 4 | `idx_comp_entity_state`, `idx_vlans_entity_tag` | Requêtes multi-critères |
+| **B-tree simple** | 39 | `idx_comp_entity`, `idx_np_computer`, `idx_ticket_status` | Jointures par FK |
+| **Composite** | 4 | `idx_comp_entity_state`, `idx_ticket_entity_status_priority` | Requêtes multi-critères |
 | **Fonctionnel** | 3 | `idx_comp_name_upper`, `idx_comp_serial_upper` | Recherche case-insensitive |
 | **Bitmap** | 4 | `bmp_comp_state`, `bmp_users_active` | Colonnes à faible cardinalité |
+| **Audit** | 3 | `idx_audit_table`, `idx_audit_date` | Consultation du journal d'audit |
 
 Tous les index sont stockés dans le tablespace dédié `TS_INDEX` pour isoler les I/O d'indexation.
 
@@ -223,7 +231,7 @@ Tous les index sont stockés dans le tablespace dédié `TS_INDEX` pour isoler l
 
 ### 3.6 Vues métier
 
-6 vues simplifient l'accès aux données complexes :
+7 vues simplifient l'accès aux données complexes :
 
 | Vue | Description | Jointures |
 |---|---|---|
@@ -233,6 +241,7 @@ Tous les index sont stockés dans le tablespace dédié `TS_INDEX` pour isoler l
 | `V_TOPOLOGIE_RESEAU` | Ports réseau + VLANs + IP + équipements | 11 LEFT JOIN |
 | `V_STATISTIQUES_SITE` | Compteurs par entité (sous-requêtes corrélées) | 8 sous-requêtes |
 | `V_MATERIEL_RECENT` | Matériels modifiés dans les 30 derniers jours | Filtre sur V_INVENTAIRE_COMPLET |
+| `V_TICKETS_SUPPORT` | Tickets avec demandeur, technicien, groupe IT et matériel concerné | 10 LEFT JOIN |
 
 > Script : [`05_views.sql`](../sql/05_views.sql)
 
@@ -310,8 +319,8 @@ Instance CERGY                    Instance PAU
 #### Éléments implémentés
 
 - **2 DB Links** : `DBL_PAU` (depuis Cergy) et `DBL_CERGY` (depuis Pau)
-- **9 synonymes** pour accès transparent aux tables distantes
-- **3 vues distribuées** : `V_COMPUTERS_GLOBAL`, `V_USERS_GLOBAL`, `V_STATS_GLOBAL`
+- **12 synonymes** pour accès transparent aux tables distantes
+- **4 vues distribuées** : `V_COMPUTERS_GLOBAL`, `V_USERS_GLOBAL`, `V_STATS_GLOBAL`, `V_TICKETS_GLOBAL`
 - **1 procédure de réplication** : `SP_REPLIQUER_REFERENTIELS` utilisant `MERGE` pour synchroniser 5 tables de référence
 
 > Script : [`07_bddr.sql`](../sql/07_bddr.sql)
@@ -339,7 +348,7 @@ Le protocole de comparaison utilise `ALTER INDEX ... INVISIBLE/VISIBLE` pour bas
 
 ### 4.1 Génération du jeu de test
 
-La procédure `SP_GENERER_JEU_DE_TEST` crée environ **20 840 lignes** de données réalistes :
+La procédure `SP_GENERER_JEU_DE_TEST` crée environ **21 100 lignes** de données réalistes :
 
 | Table | Lignes | Répartition |
 |---|---|---|
@@ -416,12 +425,12 @@ Ce projet a permis de démontrer la faisabilité et les bénéfices d'une refont
 |---|---|---|
 | Intégrité | Aucune FK | FK explicites sur toutes les relations |
 | Polymorphisme | `itemtype`/`items_id` | FK classiques + CHECK |
-| Stockage | Pas de tablespaces | 5 tablespaces dédiés |
-| Accès données | Pas de vues | 6 vues métier |
+| Stockage | Pas de tablespaces | 6 tablespaces dédiés |
+| Accès données | Pas de vues | 7 vues métier |
 | Logique métier | Tout en PHP | PL/SQL (triggers, procédures, fonctions) |
 | Architecture | Monolithique | BDDR avec DB Links |
 | Types/Modèles | 12 tables redondantes | 2 tables consolidées |
-| Performance | Index sans analyse | 22 index optimisés, gain moyen 62% |
+| Performance | Index sans analyse | 53 index optimisés, gain moyen 62% |
 
 ### 5.2 Compétences mises en œuvre
 
