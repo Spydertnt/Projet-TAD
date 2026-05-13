@@ -31,10 +31,10 @@ Ce projet réalise le **reverse engineering** de la base de données du logiciel
 └─────────────────────────────────────────────────┘
 ```
 
-- **36 tables** (vs ~30 GLPI dans le périmètre) avec FK explicites
+- **37 tables** (vs ~30 GLPI dans le périmètre) avec FK explicites
 - **6 tablespaces** dédiés (matériel, utilisateurs, réseau, support, index, temporaire)
 - **7 vues métier** pour l'accès simplifié aux données
-- **53 index** (B-tree, composites, fonctionnels, bitmap)
+- **54 index** (B-tree, composites, fonctionnels, bitmap)
 - **PL/SQL complet** : triggers, procédures, fonctions, curseurs
 - **BDDR** : DB Links, synonymes, vues distribuées, réplication
 
@@ -53,13 +53,13 @@ Projet-TAD/
 └── sql/
     ├── 00_architecture.md            # Documentation technique
     ├── 01_tablespaces.sql            # Création des tablespaces
-    ├── 02_schema_tables.sql          # 36 tables avec FK explicites
+    ├── 02_schema_tables.sql          # 37 tables avec FK explicites
     ├── 03_users_roles.sql            # Utilisateurs, rôles, privilèges Oracle
-    ├── 04_clusters_indexes.sql       # 53 index (B-tree, composite, bitmap)
+    ├── 04_clusters_indexes.sql       # 54 index (B-tree, composite, bitmap)
     ├── 05_views.sql                  # 7 vues métier
     ├── 06_plsql/
-    │   ├── triggers.sql              # 8 triggers (audit, validation, cascade)
-    │   ├── procedures.sql            # 5 procédures stockées
+    │   ├── triggers.sql              # 9 triggers (audit, validation, cascade)
+    │   ├── procedures.sql            # 6 procédures stockées
     │   ├── functions.sql             # 4 fonctions
     │   └── cursors.sql               # 4 curseurs (explicite, FOR, REF)
     ├── 07_bddr.sql                   # DB Links, synonymes, vues distribuées

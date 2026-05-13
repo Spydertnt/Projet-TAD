@@ -318,6 +318,43 @@ BEGIN
             COMMIT;
             DBMS_OUTPUT.PUT_LINE(v_site || ': 500 utilisateurs crees');
 
+            -- Affecter quelques techniciens au service IT du site avec profil recursif
+            DECLARE
+                v_tech_profile_id NUMBER;
+                v_group_it_id NUMBER;
+            BEGIN
+                SELECT id INTO v_tech_profile_id
+                FROM profiles
+                WHERE name = 'Technicien';
+
+                SELECT g.id INTO v_group_it_id
+                FROM groups g
+                WHERE g.entities_id = v_root_entity
+                  AND g.name = 'Service IT ' || v_site;
+
+                FOR rec IN (
+                    SELECT u.id
+                    FROM users u
+                    JOIN entities e ON u.entities_id = e.id
+                    WHERE e.site_code = v_site
+                      AND u.is_active = 1
+                      AND ROWNUM <= 10
+                ) LOOP
+                    BEGIN
+                        INSERT INTO profiles_users (users_id, profiles_id, entities_id, is_recursive)
+                        VALUES (rec.id, v_tech_profile_id, v_root_entity, 1);
+                    EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL;
+                    END;
+
+                    BEGIN
+                        INSERT INTO groups_users (users_id, groups_id)
+                        VALUES (rec.id, v_group_it_id);
+                    EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL;
+                    END;
+                END LOOP;
+                COMMIT;
+            END;
+
             -- =====================
             -- ORDINATEURS (1500 par site)
             -- =====================
@@ -525,6 +562,8 @@ BEGIN
                     v_requester_id NUMBER;
                     v_group_id NUMBER;
                     v_cat_id NUMBER;
+                    v_ticket_id NUMBER;
+                    v_tech_id NUMBER;
                     v_status VARCHAR2(30);
                     v_priority VARCHAR2(20);
                 BEGIN
@@ -573,6 +612,23 @@ BEGIN
                     )
                     WHERE ROWNUM = 1;
 
+                    SELECT u.id INTO v_tech_id
+                    FROM (
+                        SELECT u.id
+                        FROM users u
+                            JOIN profiles_users pu ON u.id = pu.users_id
+                            JOIN profiles p ON pu.profiles_id = p.id
+                        WHERE p.name = 'Technicien'
+                          AND pu.is_recursive = 1
+                          AND pu.entities_id = (
+                              SELECT id FROM entities
+                              WHERE site_code = v_site AND hier_level = 1
+                              AND ROWNUM = 1
+                          )
+                        ORDER BY DBMS_RANDOM.VALUE
+                    ) u
+                    WHERE ROWNUM = 1;
+
                     v_status := CASE MOD(i, 6)
                         WHEN 0 THEN 'NOUVEAU'
                         WHEN 1 THEN 'ASSIGNE'
@@ -601,7 +657,8 @@ BEGIN
                             v_group_id, v_cat_id, v_asset_id,
                             CASE WHEN v_status != 'NOUVEAU' THEN SYSTIMESTAMP ELSE NULL END,
                             CASE WHEN v_status IN ('RESOLU','CLOS') THEN SYSTIMESTAMP ELSE NULL END,
-                            CASE WHEN v_status = 'CLOS' THEN SYSTIMESTAMP ELSE NULL END);
+                            CASE WHEN v_status = 'CLOS' THEN SYSTIMESTAMP ELSE NULL END)
+                        RETURNING id INTO v_ticket_id;
                     ELSE
                         INSERT INTO tickets (entities_id, title, description,
                             status, priority, requester_users_id,
@@ -614,7 +671,13 @@ BEGIN
                             v_group_id, v_cat_id, v_asset_id,
                             CASE WHEN v_status != 'NOUVEAU' THEN SYSTIMESTAMP ELSE NULL END,
                             CASE WHEN v_status IN ('RESOLU','CLOS') THEN SYSTIMESTAMP ELSE NULL END,
-                            CASE WHEN v_status = 'CLOS' THEN SYSTIMESTAMP ELSE NULL END);
+                            CASE WHEN v_status = 'CLOS' THEN SYSTIMESTAMP ELSE NULL END)
+                        RETURNING id INTO v_ticket_id;
+                    END IF;
+
+                    IF v_status != 'NOUVEAU' THEN
+                        INSERT INTO ticket_users (tickets_id, users_id, assigned_by)
+                        VALUES (v_ticket_id, v_tech_id, v_requester_id);
                     END IF;
                 EXCEPTION WHEN OTHERS THEN NULL;
                 END;

@@ -62,6 +62,7 @@ CREATE SYNONYM users_pau FOR users@DBL_PAU;
 CREATE SYNONYM network_ports_pau FOR network_ports@DBL_PAU;
 CREATE SYNONYM entities_pau FOR entities@DBL_PAU;
 CREATE SYNONYM tickets_pau FOR tickets@DBL_PAU;
+CREATE SYNONYM ticket_users_pau FOR ticket_users@DBL_PAU;
 CREATE SYNONYM ticket_followups_pau FOR ticket_followups@DBL_PAU;
 CREATE SYNONYM ticket_categories_pau FOR ticket_categories@DBL_PAU;
 
@@ -207,14 +208,30 @@ FROM DUAL;
 -- Vue globale des tickets support
 CREATE OR REPLACE VIEW V_TICKETS_GLOBAL AS
 SELECT t.id, t.title, t.status, t.priority, t.requester_users_id,
-       t.assigned_users_id, t.assigned_groups_id, t.date_creation,
+       t.assigned_groups_id,
+       (
+           SELECT LISTAGG(u.realname || ' ' || u.firstname, ', ')
+                  WITHIN GROUP (ORDER BY u.realname, u.firstname)
+           FROM ticket_users tu
+               JOIN users u ON tu.users_id = u.id
+           WHERE tu.tickets_id = t.id
+       ) AS techniciens,
+       t.date_creation,
        e.name AS entite, 'CERGY' AS source_site
 FROM tickets t
     JOIN entities e ON t.entities_id = e.id
 WHERE e.site_code = 'CERGY'
 UNION ALL
 SELECT t.id, t.title, t.status, t.priority, t.requester_users_id,
-       t.assigned_users_id, t.assigned_groups_id, t.date_creation,
+       t.assigned_groups_id,
+       (
+           SELECT LISTAGG(u.realname || ' ' || u.firstname, ', ')
+                  WITHIN GROUP (ORDER BY u.realname, u.firstname)
+           FROM ticket_users@DBL_PAU tu
+               JOIN users@DBL_PAU u ON tu.users_id = u.id
+           WHERE tu.tickets_id = t.id
+       ) AS techniciens,
+       t.date_creation,
        e.name AS entite, 'PAU' AS source_site
 FROM tickets@DBL_PAU t
     JOIN entities@DBL_PAU e ON t.entities_id = e.id

@@ -139,7 +139,7 @@ La nouvelle architecture résout les 9 problèmes identifiés en appliquant les 
 
 > Script : [`01_tablespaces.sql`](../sql/01_tablespaces.sql)
 
-### 3.3 Schéma des tables (36 tables)
+### 3.3 Schéma des tables (37 tables)
 
 #### Tables transversales (7)
 
@@ -171,10 +171,11 @@ Toutes partagent un pattern commun avec FK vers `entities`, `users`, `locations`
 
 Contrainte notable : `UNIQUE (entities_id, serial)` sur `computers` pour empêcher les doublons de numéro de série par entité.
 
-#### Tables support / tickets (3)
+#### Tables support / tickets (4)
 
 - **`ticket_categories`** — Catégories fonctionnelles des demandes support
 - **`tickets`** — Tickets d'incident liés à une entité, un demandeur, un groupe IT et exactement un matériel
+- **`ticket_users`** — Association N-N entre tickets et techniciens assignés
 - **`ticket_followups`** — Échanges et suivis rattachés aux tickets
 
 #### Tables réseau (10)
@@ -215,11 +216,11 @@ Contrainte notable : `UNIQUE (entities_id, serial)` sur `computers` pour empêch
 
 ### 3.5 Index et optimisation
 
-53 index répartis en 5 catégories :
+54 index répartis en 5 catégories :
 
 | Type d'index | Nombre | Exemples | Justification |
 |---|---|---|---|
-| **B-tree simple** | 39 | `idx_comp_entity`, `idx_np_computer`, `idx_ticket_status` | Jointures par FK |
+| **B-tree simple** | 40 | `idx_comp_entity`, `idx_np_computer`, `idx_ticket_status` | Jointures par FK |
 | **Composite** | 4 | `idx_comp_entity_state`, `idx_ticket_entity_status_priority` | Requêtes multi-critères |
 | **Fonctionnel** | 3 | `idx_comp_name_upper`, `idx_comp_serial_upper` | Recherche case-insensitive |
 | **Bitmap** | 4 | `bmp_comp_state`, `bmp_users_active` | Colonnes à faible cardinalité |
@@ -241,7 +242,7 @@ Tous les index sont stockés dans le tablespace dédié `TS_INDEX` pour isoler l
 | `V_TOPOLOGIE_RESEAU` | Ports réseau + VLANs + IP + équipements | 11 LEFT JOIN |
 | `V_STATISTIQUES_SITE` | Compteurs par entité (sous-requêtes corrélées) | 8 sous-requêtes |
 | `V_MATERIEL_RECENT` | Matériels modifiés dans les 30 derniers jours | Filtre sur V_INVENTAIRE_COMPLET |
-| `V_TICKETS_SUPPORT` | Tickets avec demandeur, technicien, groupe IT et matériel concerné | 10 LEFT JOIN |
+| `V_TICKETS_SUPPORT` | Tickets avec demandeur, techniciens, groupe IT et matériel concerné | Vue tickets + agrégation des techniciens |
 
 > Script : [`05_views.sql`](../sql/05_views.sql)
 
@@ -319,7 +320,7 @@ Instance CERGY                    Instance PAU
 #### Éléments implémentés
 
 - **2 DB Links** : `DBL_PAU` (depuis Cergy) et `DBL_CERGY` (depuis Pau)
-- **12 synonymes** pour accès transparent aux tables distantes
+- **13 synonymes** pour accès transparent aux tables distantes
 - **4 vues distribuées** : `V_COMPUTERS_GLOBAL`, `V_USERS_GLOBAL`, `V_STATS_GLOBAL`, `V_TICKETS_GLOBAL`
 - **1 procédure de réplication** : `SP_REPLIQUER_REFERENTIELS` utilisant `MERGE` pour synchroniser 5 tables de référence
 
@@ -430,7 +431,7 @@ Ce projet a permis de démontrer la faisabilité et les bénéfices d'une refont
 | Logique métier | Tout en PHP | PL/SQL (triggers, procédures, fonctions) |
 | Architecture | Monolithique | BDDR avec DB Links |
 | Types/Modèles | 12 tables redondantes | 2 tables consolidées |
-| Performance | Index sans analyse | 53 index optimisés, gain moyen 62% |
+| Performance | Index sans analyse | 54 index optimisés, gain moyen 62% |
 
 ### 5.2 Compétences mises en œuvre
 

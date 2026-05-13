@@ -109,6 +109,8 @@ BEGIN
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_comp INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_pri INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_tf_ticket INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_tu_ticket INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_tu_user INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_entity_status_priority INVISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
 
     -- Vider le cache
@@ -179,7 +181,7 @@ BEGIN
          WHERE site = ''CERGY''');
 
     SP_BENCHMARK_QUERY('Q9', 'Tickets ouverts support IT', 'SANS_INDEX',
-        'SELECT ticket_id, titre, statut, priorite, demandeur,
+        'SELECT ticket_id, titre, statut, priorite, demandeur, techniciens,
                 groupe_it, type_materiel, nom_materiel, date_creation
          FROM V_TICKETS_SUPPORT
          WHERE site = ''CERGY''
@@ -235,6 +237,8 @@ BEGIN
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_comp VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_pri VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_tf_ticket VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_tu_ticket VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_tu_user VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
     BEGIN EXECUTE IMMEDIATE 'ALTER INDEX idx_ticket_entity_status_priority VISIBLE'; EXCEPTION WHEN OTHERS THEN NULL; END;
 
     -- Vider le cache
@@ -305,7 +309,7 @@ BEGIN
          WHERE site = ''CERGY''');
 
     SP_BENCHMARK_QUERY('Q9', 'Tickets ouverts support IT', 'AVEC_INDEX',
-        'SELECT ticket_id, titre, statut, priorite, demandeur,
+        'SELECT ticket_id, titre, statut, priorite, demandeur, techniciens,
                 groupe_it, type_materiel, nom_materiel, date_creation
          FROM V_TICKETS_SUPPORT
          WHERE site = ''CERGY''

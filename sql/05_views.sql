@@ -257,7 +257,13 @@ SELECT
     e.name AS entite,
     e.site_code AS site,
     req.realname || ' ' || req.firstname AS demandeur,
-    tech.realname || ' ' || tech.firstname AS technicien,
+    (
+        SELECT LISTAGG(tech.realname || ' ' || tech.firstname, ', ')
+               WITHIN GROUP (ORDER BY tech.realname, tech.firstname)
+        FROM ticket_users tu
+            JOIN users tech ON tu.users_id = tech.id
+        WHERE tu.tickets_id = t.id
+    ) AS techniciens,
     g.name AS groupe_it,
     CASE
         WHEN t.computers_id IS NOT NULL THEN 'COMPUTER'
@@ -277,7 +283,6 @@ SELECT
 FROM tickets t
     JOIN entities e ON t.entities_id = e.id
     JOIN users req ON t.requester_users_id = req.id
-    LEFT JOIN users tech ON t.assigned_users_id = tech.id
     LEFT JOIN groups g ON t.assigned_groups_id = g.id
     LEFT JOIN ticket_categories tc ON t.ticket_categories_id = tc.id
     LEFT JOIN computers c ON t.computers_id = c.id

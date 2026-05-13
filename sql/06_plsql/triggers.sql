@@ -67,6 +67,28 @@ BEGIN
 END;
 /
 
+CREATE OR REPLACE TRIGGER TRG_CHECK_TICKET_USER_TECH
+BEFORE INSERT OR UPDATE ON ticket_users
+FOR EACH ROW
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM profiles_users pu
+        JOIN profiles p ON pu.profiles_id = p.id
+        JOIN tickets t ON t.id = :NEW.tickets_id
+    WHERE pu.users_id = :NEW.users_id
+      AND p.name = 'Technicien'
+      AND (pu.entities_id = t.entities_id OR pu.is_recursive = 1);
+
+    IF v_count = 0 THEN
+        RAISE_APPLICATION_ERROR(-20060,
+            'Un ticket ne peut etre assigne qu''a un utilisateur avec le profil Technicien');
+    END IF;
+END;
+/
+
 -- =========================
 -- TRG_AUDIT_COMPUTERS
 -- Log automatique de toutes les modifications sur computers

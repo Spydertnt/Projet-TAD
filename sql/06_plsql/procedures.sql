@@ -210,6 +210,7 @@ CREATE OR REPLACE PROCEDURE SP_CREER_TICKET_MATERIEL (
     p_priority          IN VARCHAR2 DEFAULT 'MOYENNE',
     p_category_id       IN NUMBER DEFAULT NULL,
     p_assigned_group_id IN NUMBER DEFAULT NULL,
+    p_assigned_user_id  IN NUMBER DEFAULT NULL,
     p_ticket_id         OUT NUMBER
 )
 AS
@@ -266,10 +267,21 @@ BEGIN
         CASE WHEN v_asset_type = 'PRINTER' THEN p_asset_id END,
         CASE WHEN v_asset_type = 'PHONE' THEN p_asset_id END,
         CASE WHEN v_asset_type = 'NETWORK_EQUIPMENT' THEN p_asset_id END,
-        CASE WHEN p_assigned_group_id IS NULL THEN 'NOUVEAU' ELSE 'ASSIGNE' END,
-        CASE WHEN p_assigned_group_id IS NULL THEN NULL ELSE SYSTIMESTAMP END
+        CASE
+            WHEN p_assigned_group_id IS NULL AND p_assigned_user_id IS NULL THEN 'NOUVEAU'
+            ELSE 'ASSIGNE'
+        END,
+        CASE
+            WHEN p_assigned_group_id IS NULL AND p_assigned_user_id IS NULL THEN NULL
+            ELSE SYSTIMESTAMP
+        END
     )
     RETURNING id INTO p_ticket_id;
+
+    IF p_assigned_user_id IS NOT NULL THEN
+        INSERT INTO ticket_users (tickets_id, users_id, assigned_by)
+        VALUES (p_ticket_id, p_assigned_user_id, p_requester_id);
+    END IF;
 
     COMMIT;
     DBMS_OUTPUT.PUT_LINE('Ticket cree et envoye au service IT: #' || p_ticket_id);
@@ -282,6 +294,43 @@ END SP_CREER_TICKET_MATERIEL;
 /
 
 GRANT EXECUTE ON SP_CREER_TICKET_MATERIEL
+    TO ROLE_TECHNICIEN, ROLE_MANAGER_SITE, ROLE_ADMIN;
+
+-- =========================
+-- SP_ASSIGNER_TECH_TICKET
+-- Ajoute un technicien a un ticket existant
+-- =========================
+
+CREATE OR REPLACE PROCEDURE SP_ASSIGNER_TECH_TICKET (
+    p_ticket_id    IN NUMBER,
+    p_user_id      IN NUMBER,
+    p_assigned_by  IN NUMBER DEFAULT NULL
+)
+AS
+BEGIN
+    INSERT INTO ticket_users (tickets_id, users_id, assigned_by)
+    VALUES (p_ticket_id, p_user_id, p_assigned_by);
+
+    UPDATE tickets
+    SET status = CASE WHEN status = 'NOUVEAU' THEN 'ASSIGNE' ELSE status END,
+        date_assigned = NVL(date_assigned, SYSTIMESTAMP)
+    WHERE id = p_ticket_id;
+
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Technicien assigne au ticket #' || p_ticket_id);
+EXCEPTION
+    WHEN DUP_VAL_ON_INDEX THEN
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20061,
+            'Ce technicien est deja assigne a ce ticket');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20062,
+            'Erreur assignation technicien: ' || SQLERRM);
+END SP_ASSIGNER_TECH_TICKET;
+/
+
+GRANT EXECUTE ON SP_ASSIGNER_TECH_TICKET
     TO ROLE_TECHNICIEN, ROLE_MANAGER_SITE, ROLE_ADMIN;
 
 -- =========================

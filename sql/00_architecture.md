@@ -73,9 +73,10 @@ La nouvelle architecture remplace la BDD monolithique MySQL de GLPI par une **ar
 - `phones` (id, entities_id→entities, name, serial, ...)
 - `network_equipments` (id, entities_id→entities, name, serial, ram, ...)
 
-### Tables support / tickets (3)
+### Tables support / tickets (4)
 - `ticket_categories` (id, name, description)
 - `tickets` (id, entities_id→entities, requester_users_id→users, assigned_groups_id→groups, ...)
+- `ticket_users` (id, tickets_id→tickets, users_id→users, role)
 - `ticket_followups` (id, tickets_id→tickets, users_id→users, content)
 
 ### Tables réseau (10)
@@ -95,7 +96,7 @@ La nouvelle architecture remplace la BDD monolithique MySQL de GLPI par une **ar
 - `audit_log` (id, table_name, record_id, action, old_values, new_values)
 - `archives_materiel` (id, source_table, source_id, data)
 
-**Total : 36 tables** (vs ~30 GLPI dans le périmètre, mais avec intégrité garantie)
+**Total : 37 tables** (vs ~30 GLPI dans le périmètre, mais avec intégrité garantie)
 
 ## 4. Stratégie de distribution (BDDR)
 

@@ -194,6 +194,7 @@ SELECT
     t.statut,
     t.priorite,
     t.demandeur,
+    t.techniciens,
     t.groupe_it,
     t.type_materiel,
     t.nom_materiel,

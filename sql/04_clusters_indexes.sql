@@ -77,8 +77,6 @@ CREATE INDEX idx_ticket_status ON tickets(status)
     TABLESPACE TS_INDEX;
 CREATE INDEX idx_ticket_requester ON tickets(requester_users_id)
     TABLESPACE TS_INDEX;
-CREATE INDEX idx_ticket_assigned_user ON tickets(assigned_users_id)
-    TABLESPACE TS_INDEX;
 CREATE INDEX idx_ticket_assigned_group ON tickets(assigned_groups_id)
     TABLESPACE TS_INDEX;
 CREATE INDEX idx_ticket_category ON tickets(ticket_categories_id)
@@ -88,6 +86,10 @@ CREATE INDEX idx_ticket_comp ON tickets(computers_id)
 CREATE INDEX idx_ticket_pri ON tickets(printers_id)
     TABLESPACE TS_INDEX;
 CREATE INDEX idx_tf_ticket ON ticket_followups(tickets_id)
+    TABLESPACE TS_INDEX;
+CREATE INDEX idx_tu_ticket ON ticket_users(tickets_id)
+    TABLESPACE TS_INDEX;
+CREATE INDEX idx_tu_user ON ticket_users(users_id)
     TABLESPACE TS_INDEX;
 
 -- === RÉSEAU ===

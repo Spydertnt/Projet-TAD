@@ -84,15 +84,15 @@ ORACLE XE — CERGY          ORACLE XE — PAU
 
 | Élément | Nombre |
 |---|---|
-| Tables | **36** (avec FK explicites) |
+| Tables | **37** (avec FK explicites) |
 | Tablespaces | **6** |
 | Vues métier | **7** |
-| Index | **53** |
+| Index | **54** |
 | Rôles Oracle | **4** |
 | Utilisateurs Oracle | **6** |
 
 **Notes orales :**
-> *Notre nouvelle architecture utilise deux instances Oracle XE connectées par Database Links. On a 36 tables avec des FK explicites partout, 6 tablespaces pour séparer physiquement les données, et 4 rôles Oracle avec des privilèges différenciés. Les données sont fragmentées horizontalement par site — chaque site stocke ses matériels, utilisateurs et tickets — tandis que les référentiels comme les fabricants, les types et les catégories de tickets sont répliqués.*
+> *Notre nouvelle architecture utilise deux instances Oracle XE connectées par Database Links. On a 37 tables avec des FK explicites partout, 6 tablespaces pour séparer physiquement les données, et 4 rôles Oracle avec des privilèges différenciés. Les données sont fragmentées horizontalement par site — chaque site stocke ses matériels, utilisateurs et tickets — tandis que les référentiels comme les fabricants, les types et les catégories de tickets sont répliqués.*
 
 ---
 
@@ -106,11 +106,11 @@ ORACLE XE — CERGY          ORACLE XE — PAU
 | Polymorphisme | 6 colonnes FK nullable + `CHECK (exactement 1 parent)` |
 | 12 tables redondantes | 2 tables consolidées (`asset_types`, `asset_models`) avec `category` |
 | Monolithique | BDDR : DB Links + synonymes + vues distribuées |
-| Pas de PL/SQL | 8 triggers, 5 procédures, 4 fonctions, 4 curseurs |
+| Pas de PL/SQL | 9 triggers, 6 procédures, 4 fonctions, 4 curseurs |
 | Pas de vues | 7 vues métier (inventaire, topologie, statistiques, tickets) |
 
 **Notes orales :**
-> *Point par point : les FK sont maintenant toutes explicites. Le polymorphisme de `network_ports` et des tickets est résolu par 6 colonnes FK nullable avec une contrainte CHECK qui garantit qu'exactement un parent est renseigné. Les 12 tables de types et modèles sont consolidées en 2 tables avec un champ `category`. Et on a ajouté tout le PL/SQL qui manquait : triggers d'audit, procédures de transfert inter-sites et de création de tickets, fonctions de calcul, et 4 types de curseurs différents.*
+> *Point par point : les FK sont maintenant toutes explicites. Le polymorphisme de `network_ports` et des tickets est résolu par 6 colonnes FK nullable avec une contrainte CHECK qui garantit qu'exactement un parent est renseigné. Les 12 tables de types et modèles sont consolidées en 2 tables avec un champ `category`. Et on a ajouté tout le PL/SQL qui manquait : triggers d'audit, procédures de transfert inter-sites, création de tickets et assignation de techniciens, fonctions de calcul, et 4 types de curseurs différents.*
 
 ---
 
@@ -144,7 +144,7 @@ Transfert inter-sites (Cergy → Pau) :
 4. **REF CURSOR** (curseur variable dynamique)
 
 **Notes orales :**
-> *En PL/SQL, on a implémenté 8 triggers. Le plus intéressant c'est le trigger d'audit qui log automatiquement toute modification sur les ordinateurs. La procédure `SP_TRANSFERT_MATERIEL` gère le transfert d'un ordinateur entre sites, et `SP_CREER_TICKET_MATERIEL` centralise la création d'un ticket envoyé au service IT. On a aussi démontré les 4 types de curseurs PL/SQL : curseur explicite paramétré avec OPEN/FETCH/CLOSE, curseur explicite classique, FOR loop implicite, et REF CURSOR dynamique.*
+> *En PL/SQL, on a implémenté 9 triggers. Le plus intéressant c'est le trigger d'audit qui log automatiquement toute modification sur les ordinateurs. La procédure `SP_TRANSFERT_MATERIEL` gère le transfert d'un ordinateur entre sites, et `SP_CREER_TICKET_MATERIEL` centralise la création d'un ticket envoyé au service IT. On a aussi démontré les 4 types de curseurs PL/SQL : curseur explicite paramétré avec OPEN/FETCH/CLOSE, curseur explicite classique, FOR loop implicite, et REF CURSOR dynamique.*
 
 ---
 
@@ -155,7 +155,7 @@ Transfert inter-sites (Cergy → Pau) :
 | Élément | Implémentation |
 |---|---|
 | DB Links | `DBL_PAU` (Cergy→Pau), `DBL_CERGY` (Pau→Cergy) |
-| Synonymes | 12 synonymes pour accès transparent |
+| Synonymes | 13 synonymes pour accès transparent |
 | Fragmentation | Horizontale par `site_code` |
 | Réplication | `SP_REPLIQUER_REFERENTIELS` (MERGE sur 6 tables) |
 | Vues globales | `V_COMPUTERS_GLOBAL`, `V_USERS_GLOBAL`, `V_STATS_GLOBAL`, `V_TICKETS_GLOBAL` |
@@ -233,9 +233,9 @@ Projet-TAD/
 └── sql/
     ├── 00_architecture.md             ← Doc technique
     ├── 01_tablespaces.sql             ← 6 tablespaces
-    ├── 02_schema_tables.sql           ← 36 tables, FK explicites
+    ├── 02_schema_tables.sql           ← 37 tables, FK explicites
     ├── 03_users_roles.sql             ← 4 rôles, 6 utilisateurs
-    ├── 04_clusters_indexes.sql        ← 53 index
+    ├── 04_clusters_indexes.sql        ← 54 index
     ├── 05_views.sql                   ← 7 vues métier
     ├── 06_plsql/                      ← Triggers, procédures, fonctions, curseurs
     ├── 07_bddr.sql                    ← DB Links, synonymes, vues distribuées
