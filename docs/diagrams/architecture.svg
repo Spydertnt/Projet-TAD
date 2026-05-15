@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="820" viewBox="0 0 1320 820" role="img" aria-label="Architecture Oracle XE distribuee Cergy Pau">
+<defs>
+<marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+<path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+</marker>
+<filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+<feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#0f172a" flood-opacity="0.16"/>
+</filter>
+</defs>
+<title>Architecture Oracle XE distribuee Cergy Pau</title>
+<rect x="0" y="0" width="1320" height="820" fill="#f8fafc"/>
+<text x="660" y="46" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="28" font-weight="800" fill="#0f172a" text-anchor="middle">Architecture Oracle XE distribuee - Cergy / Pau</text>
+<text x="660" y="76" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="500" fill="#475569" text-anchor="middle">Fragmentation horizontale des donnees operationnelles, replication des referentiels</text>
+<rect class="" x="70" y="140" width="460" height="490" rx="18" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="300" y="178" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="800" fill="#2563eb" text-anchor="middle">SITE CERGY</text>
+<text x="300" y="206" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#475569" text-anchor="middle">Oracle XE - instance locale</text>
+<rect class="" x="105" y="240" width="180" height="152" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="105" y="240" width="180" height="36" rx="10" fill="#2563eb" stroke="#2563eb"/>
+<rect x="105" y="265" width="180" height="12" fill="#2563eb"/>
+<text x="117" y="264" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">Tablespaces</text>
+<text x="117" y="298" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">TS_MATERIEL</text>
+<text x="117" y="320" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">TS_UTILISATEURS</text>
+<text x="117" y="342" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">TS_RESEAU</text>
+<text x="117" y="364" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">TS_SUPPORT</text>
+<text x="117" y="386" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">TS_INDEX</text>
+<rect class="" x="315" y="240" width="180" height="174" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="315" y="240" width="180" height="36" rx="10" fill="#64748b" stroke="#64748b"/>
+<rect x="315" y="265" width="180" height="12" fill="#64748b"/>
+<text x="327" y="264" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">Donnees locales</text>
+<text x="327" y="298" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">entities</text>
+<text x="327" y="320" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">locations</text>
+<text x="327" y="342" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">users / groups</text>
+<text x="327" y="364" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">assets</text>
+<text x="327" y="386" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">tickets</text>
+<text x="327" y="408" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">network_ports</text>
+<rect class="" x="105" y="450" width="390" height="108" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="105" y="450" width="390" height="36" rx="10" fill="#7c3aed" stroke="#7c3aed"/>
+<rect x="105" y="475" width="390" height="12" fill="#7c3aed"/>
+<text x="117" y="474" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">Referentiels repliques</text>
+<text x="117" y="508" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">manufacturers, states, networks</text>
+<text x="117" y="530" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">asset_models</text>
+<text x="117" y="552" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">ticket_categories</text>
+<rect class="" x="790" y="140" width="460" height="490" rx="18" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="1020" y="178" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="800" fill="#0f766e" text-anchor="middle">SITE PAU</text>
+<text x="1020" y="206" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#475569" text-anchor="middle">Oracle XE - instance locale</text>
+<rect class="" x="825" y="240" width="180" height="152" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="825" y="240" width="180" height="36" rx="10" fill="#0f766e" stroke="#0f766e"/>
+<rect x="825" y="265" width="180" height="12" fill="#0f766e"/>
+<text x="837" y="264" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">Tablespaces</text>
+<text x="837" y="298" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">TS_MATERIEL</text>
+<text x="837" y="320" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">TS_UTILISATEURS</text>
+<text x="837" y="342" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">TS_RESEAU</text>
+<text x="837" y="364" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">TS_SUPPORT</text>
+<text x="837" y="386" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">TS_INDEX</text>
+<rect class="" x="1035" y="240" width="180" height="174" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="1035" y="240" width="180" height="36" rx="10" fill="#64748b" stroke="#64748b"/>
+<rect x="1035" y="265" width="180" height="12" fill="#64748b"/>
+<text x="1047" y="264" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">Donnees locales</text>
+<text x="1047" y="298" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">entities</text>
+<text x="1047" y="320" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">locations</text>
+<text x="1047" y="342" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">users / groups</text>
+<text x="1047" y="364" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">assets</text>
+<text x="1047" y="386" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">tickets</text>
+<text x="1047" y="408" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">network_ports</text>
+<rect class="" x="825" y="450" width="390" height="108" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="825" y="450" width="390" height="36" rx="10" fill="#7c3aed" stroke="#7c3aed"/>
+<rect x="825" y="475" width="390" height="12" fill="#7c3aed"/>
+<text x="837" y="474" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">Referentiels repliques</text>
+<text x="837" y="508" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">manufacturers, states, networks</text>
+<text x="837" y="530" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">asset_models</text>
+<text x="837" y="552" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">ticket_categories</text>
+<line x1="535" y1="315" x2="785" y2="315" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+<line x1="785" y1="370" x2="535" y2="370" stroke="#334155" stroke-width="3" marker-end="url(#arrow)"/>
+<text x="660" y="300" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="800" fill="#0f172a" text-anchor="middle">DB Link</text>
+<text x="660" y="348" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#475569" text-anchor="middle">requete distante</text>
+<text x="660" y="402" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#475569" text-anchor="middle">replication referentiels</text>
+<rect class="" x="240" y="680" width="840" height="86" rx="18" fill="#ecfeff" stroke="#67e8f9" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="660" y="714" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="800" fill="#0e7490" text-anchor="middle">Regle de distribution</text>
+<text x="660" y="744" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#155e75" text-anchor="middle">Les lignes operationnelles restent sur leur site selon entities.site_code.</text>
+<text x="660" y="766" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#155e75" text-anchor="middle">Les vues globales interrogent les deux instances via V_ASSETS_GLOBAL, V_USERS_GLOBAL, V_TICKETS_GLOBAL.</text>
+</svg>

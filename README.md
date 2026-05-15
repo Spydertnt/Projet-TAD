@@ -1,82 +1,71 @@
-# Mini-Projet GLPI — Nouvelle BDD Multi-Sites
+# Mini-Projet GLPI - Nouvelle BDD Multi-Sites
 
-> **CY Tech — TAD 2025-2026**  
-> Refonte de la base de données GLPI pour une architecture Oracle XE distribuée multi-sites (Cergy / Pau)
+> CY Tech - TAD 2025-2026  
+> Refonte simplifiee d'une base GLPI vers Oracle XE distribue entre Cergy et Pau.
 
----
+## Objectif
 
-## 📋 Description
+Le projet part du constat que GLPI possede un schema tres volumineux, peu contraint par le SGBD et difficile a distribuer proprement. La nouvelle version garde uniquement le noyau utile au projet :
 
-Ce projet réalise le **reverse engineering** de la base de données du logiciel GLPI (Gestionnaire Libre de Parc Informatique), puis conçoit et implémente une **nouvelle architecture Oracle** répondant aux enjeux d'un déploiement multi-sites entre **Cergy** et **Pau**.
+- gestion multi-sites avec `entities` et `locations`
+- utilisateurs, profils et groupes
+- inventaire unifie avec une seule table `assets`
+- tickets support rattaches aux materiels
+- reseau essentiel : ports, connexions, VLAN, IP
+- audit et archivage des materiels
+- BDDR par DB Links Oracle
 
-### Objectifs
-- Analyser la structure existante de GLPI (MySQL, +250 tables, pas de FK)
-- Concevoir une nouvelle BDD Oracle avec intégrité référentielle garantie
-- Implémenter les concepts avancés : PL/SQL, tablespaces, BDDR, indexation
-- Valider les performances par des benchmarks comparatifs
-
----
-
-## 🏗️ Architecture
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│   ORACLE XE — CERGY    ◄──DB Link──►   ORACLE XE — PAU   │
-│                                                           │
-│   TS_MATERIEL           Fragmentation    TS_MATERIEL      │
-│   TS_UTILISATEURS       horizontale      TS_UTILISATEURS  │
-│   TS_RESEAU             + réplication    TS_RESEAU        │
-│   TS_SUPPORT            référentiels     TS_SUPPORT       │
-│   TS_INDEX                                TS_INDEX         │
-└─────────────────────────────────────────────────┘
+Oracle XE - Cergy  <------ DB Link ------>  Oracle XE - Pau
+
+Fragmentation horizontale :
+- assets
+- users
+- tickets
+- network_ports
+
+Replication :
+- manufacturers
+- states
+- networks
+- asset_models
+- ticket_categories
 ```
 
-- **37 tables** (vs ~30 GLPI dans le périmètre) avec FK explicites
-- **6 tablespaces** dédiés (matériel, utilisateurs, réseau, support, index, temporaire)
-- **7 vues métier** pour l'accès simplifié aux données
-- **54 index** (B-tree, composites, fonctionnels, bitmap)
-- **PL/SQL complet** : triggers, procédures, fonctions, curseurs
-- **BDDR** : DB Links, synonymes, vues distribuées, réplication
+Le schema passe de 37 tables a **24 tables**. La simplification majeure est la table `assets`, qui remplace les anciennes tables `computers`, `monitors`, `peripherals`, `printers`, `phones` et `network_equipments`.
 
----
+## Structure
 
-## 📁 Structure du projet
-
-```
+```text
 Projet-TAD/
-├── README.md
-├── docs/
-│   ├── reverse_engineering_glpi.md   # Phase 1 — Analyse de l'existant
-│   ├── rapport.md                    # Rapport détaillé du projet
-│   ├── presentation.md               # Support pour la soutenance orale
-│   └── performance_report.html       # Rapport interactif de benchmarks
-└── sql/
-    ├── 00_architecture.md            # Documentation technique
-    ├── 01_tablespaces.sql            # Création des tablespaces
-    ├── 02_schema_tables.sql          # 37 tables avec FK explicites
-    ├── 03_users_roles.sql            # Utilisateurs, rôles, privilèges Oracle
-    ├── 04_clusters_indexes.sql       # 54 index (B-tree, composite, bitmap)
-    ├── 05_views.sql                  # 7 vues métier
-    ├── 06_plsql/
-    │   ├── triggers.sql              # 9 triggers (audit, validation, cascade)
-    │   ├── procedures.sql            # 6 procédures stockées
-    │   ├── functions.sql             # 4 fonctions
-    │   └── cursors.sql               # 4 curseurs (explicite, FOR, REF)
-    ├── 07_bddr.sql                   # DB Links, synonymes, vues distribuées
-    ├── 08_query_plans.sql            # Analyse des plans d'exécution
-    ├── 09_test_data.sql              # Génération de ~20 000 lignes de test
-    └── 10_benchmark.sql              # Suite de benchmarks comparatifs
+|-- README.md
+|-- docs/
+|   |-- reverse_engineering_glpi.md
+|   |-- rapport.md
+|   |-- presentation.md
+|   `-- performance_report.html
+`-- sql/
+    |-- 00_architecture.md
+    |-- 01_tablespaces.sql
+    |-- 02_schema_tables.sql
+    |-- 03_users_roles.sql
+    |-- 04_clusters_indexes.sql
+    |-- 05_views.sql
+    |-- 06_plsql/
+    |   |-- triggers.sql
+    |   |-- procedures.sql
+    |   |-- functions.sql
+    |   `-- cursors.sql
+    |-- 07_bddr.sql
+    |-- 08_query_plans.sql
+    |-- 09_test_data.sql
+    `-- 10_benchmark.sql
 ```
 
----
+## Execution
 
-## 🚀 Installation et exécution
-
-### Prérequis
-- Oracle XE 21c
-- SQL*Plus ou SQLcl
-
-### Exécution (dans l'ordre)
 ```sql
 @01_tablespaces.sql
 @02_schema_tables.sql
@@ -93,21 +82,17 @@ Projet-TAD/
 @10_benchmark.sql
 ```
 
----
+## Livrables principaux
 
-## 📊 Résultats de performance
+- `sql/00_architecture.md` : MCD, MLD et strategie BDDR
+- `scripts/generate_diagrams.py` : generation des schemas SVG
+- `docs/diagrams/architecture.svg` et `docs/diagrams/mcd.svg` : schemas visuels
+- `sql/02_schema_tables.sql` : schema relationnel simplifie
+- `sql/05_views.sql` : vues metier
+- `sql/06_plsql/` : triggers, procedures, fonctions et curseurs
+- `sql/09_test_data.sql` : generation d'un jeu de test coherent
+- `sql/10_benchmark.sql` : mesures de performance
 
-| Métrique | Valeur |
-|---|---|
-| Lignes générées | ~21 100 |
-| Gain moyen | **62%** |
-| Gain maximum | **94%** (recherches indexées) |
-| Requêtes testées | 8 |
+## Resultat
 
-> Voir le rapport interactif : [`docs/performance_report.html`](docs/performance_report.html)
-
----
-
-## 📄 Licence
-
-Projet académique — CY Tech 2025-2026
+La base reste assez riche pour demontrer les notions du cours (FK, tablespaces, vues, PL/SQL, index, BDDR), mais elle est nettement plus lisible : une table centrale pour l'inventaire, des relations simples, et un MCD/MLD defendable en soutenance.

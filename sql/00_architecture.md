@@ -1,124 +1,101 @@
-# Architecture — Nouvelle BDD GLPI Multi-Sites
+# Architecture - BDD GLPI Multi-Sites simplifiee
 
 ## 1. Vue d'ensemble
 
-La nouvelle architecture remplace la BDD monolithique MySQL de GLPI par une **architecture Oracle distribuée** entre deux sites : **Cergy** et **Pau**.
+Le modele cible remplace le schema GLPI tres fragmente par une architecture Oracle distribuee entre deux sites, Cergy et Pau. La simplification principale consiste a centraliser tous les materiels dans une seule table `assets`.
 
+![Schema d'architecture](../docs/diagrams/architecture.svg)
+
+Les fichiers SVG sont generes par `scripts/generate_diagrams.py`.
+
+## 2. Principes retenus
+
+| Ancien probleme | Choix simplifie |
+|---|---|
+| 6 tables de materiels presque identiques | 1 table `assets` avec `category` |
+| Colonnes polymorphes multiples dans tickets/ports | 1 FK simple `assets_id` |
+| Trop de referentiels utilisateurs | Suppression de `user_titles`, `user_categories`, `profile_rights` |
+| Reseau trop detaille pour le besoin projet | Conservation ports, connexions, VLAN, sous-reseaux et IP |
+| Audit utile mais non central | Tables systeme separees `audit_log`, `archives_materiel` |
+
+## 3. MCD simplifie
+
+![MCD simplifie](../docs/diagrams/mcd.svg)
+
+Pour regenerer les schemas apres une modification du modele :
+
+```bash
+python scripts/generate_diagrams.py
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    ARCHITECTURE GLOBALE                   │
-│                                                          │
-│   ┌──────────────────┐    DB Link    ┌────────────────┐  │
-│   │   ORACLE XE      │◄────────────►│   ORACLE XE    │  │
-│   │   SITE CERGY     │              │   SITE PAU     │  │
-│   │                  │              │                │  │
-│   │ TS_MATERIEL      │              │ TS_MATERIEL    │  │
-│   │ TS_UTILISATEURS  │              │ TS_UTILISATEURS│  │
-│   │ TS_RESEAU        │              │ TS_RESEAU      │  │
-│   │ TS_INDEX         │              │ TS_INDEX       │  │
-│   └──────────────────┘              └────────────────┘  │
-│                                                          │
-│   Données locales :                  Données locales :   │
-│   - Matériels Cergy                 - Matériels Pau     │
-│   - Users Cergy                     - Users Pau         │
-│   - Ports réseau Cergy              - Ports réseau Pau  │
-│                                                          │
-│   Données répliquées (identiques sur les 2 sites) :      │
-│   - manufacturers, states, asset_types, asset_models     │
-│   - networks, profiles, profile_rights                   │
-└─────────────────────────────────────────────────────────┘
-```
 
-## 2. Problèmes résolus vs GLPI original
+## 4. MLD
 
-| # | Problème GLPI | Solution nouvelle BDD |
-|---|---|---|
-| 1 | Aucune FK | FK explicites sur toutes les relations |
-| 2 | Polymorphisme `itemtype`/`items_id` | FK classiques (une colonne par type) + CHECK |
-| 3 | Pas de tablespaces | 6 tablespaces dédiés |
-| 4 | Pas de vues | 7 vues métier |
-| 5 | Pas de PL/SQL | Triggers, curseurs, procédures, fonctions |
-| 6 | Base monolithique | BDDR avec DB Links entre Cergy et Pau |
-| 7 | Tables types redondantes | Consolidation en `asset_types` / `asset_models` |
-| 8 | Index sans analyse | Index B-tree, composites, fonctionnels, bitmap |
+### Transversal et referentiels
 
-## 3. Modèle Logique de Données (MLD)
+- `entities(id, entities_id -> entities, name, site_code, completename, ...)`
+- `locations(id, entities_id -> entities, locations_id -> locations, name, building, room, ...)`
+- `manufacturers(id, name)`
+- `states(id, name)`
+- `networks(id, name)`
+- `asset_models(id, category, name)`
 
-### Tables transversales (4)
-- `entities` (id, name, entities_id→entities, level, site_code, ...)
-- `locations` (id, entities_id→entities, locations_id→locations, building, room, ...)
-- `manufacturers` (id, name)
-- `states` (id, entities_id→entities, name, is_visible_*)
+### Utilisateurs et droits
 
-### Tables de référence consolidées (3)
-- `networks` (id, name)
-- `asset_types` (id, category, name) — remplace 6 tables GLPI
-- `asset_models` (id, category, name) — remplace 6 tables GLPI
+- `users(id, login, realname, firstname, email, entities_id -> entities, locations_id -> locations, users_id_supervisor -> users, is_active, ...)`
+- `profiles(id, name, interface, is_default)`
+- `profiles_users(id, users_id -> users, profiles_id -> profiles, entities_id -> entities, is_recursive)`
+- `groups(id, entities_id -> entities, groups_id -> groups, name, completename)`
+- `groups_users(id, users_id -> users, groups_id -> groups, is_manager)`
 
-### Tables utilisateurs (8)
-- `user_titles` (id, name)
-- `user_categories` (id, name)
-- `users` (id, name, password, realname, firstname, entities_id→entities, ...)
-- `profiles` (id, name, interface, is_default)
-- `profile_rights` (id, profiles_id→profiles, name, rights)
-- `profiles_users` (id, users_id→users, profiles_id→profiles, entities_id→entities)
-- `groups` (id, entities_id→entities, groups_id→groups, name, ...)
-- `groups_users` (id, users_id→users, groups_id→groups, is_manager)
+### Inventaire
 
-### Tables matériels (6)
-- `computers` (id, entities_id→entities, name, serial, users_id→users, ...)
-- `monitors` (id, entities_id→entities, name, serial, size_monitor, ...)
-- `peripherals` (id, entities_id→entities, name, serial, ...)
-- `printers` (id, entities_id→entities, name, serial, networks_id→networks, ...)
-- `phones` (id, entities_id→entities, name, serial, ...)
-- `network_equipments` (id, entities_id→entities, name, serial, ram, ...)
+- `assets(id, entities_id -> entities, category, name, serial, inventory_tag, uuid, users_id -> users, users_id_tech -> users, locations_id -> locations, asset_models_id -> asset_models, manufacturers_id -> manufacturers, states_id -> states, networks_id -> networks, notes, ...)`
 
-### Tables support / tickets (4)
-- `ticket_categories` (id, name, description)
-- `tickets` (id, entities_id→entities, requester_users_id→users, assigned_groups_id→groups, ...)
-- `ticket_users` (id, tickets_id→tickets, users_id→users, role)
-- `ticket_followups` (id, tickets_id→tickets, users_id→users, content)
+La colonne `category` porte le type fonctionnel : `COMPUTER`, `MONITOR`, `PERIPHERAL`, `PRINTER`, `PHONE`, `NETWORK_EQUIPMENT`.
 
-### Tables réseau (10)
-- `fqdns` (id, entities_id→entities, name, fqdn)
-- `network_ports` (id, entities_id→entities, computers_id, printers_id, ..., mac)
-- `network_names` (id, network_ports_id→network_ports, fqdns_id→fqdns)
-- `ip_addresses` (id, entities_id→entities, network_names_id→network_names, name)
-- `network_connections` (id, network_ports_id_1→network_ports, network_ports_id_2)
-- `vlans` (id, entities_id→entities, name, tag)
-- `network_port_vlans` (id, network_ports_id→network_ports, vlans_id→vlans)
-- `ip_networks` (id, entities_id→entities, address, netmask, gateway)
-- `ip_network_vlans` (id, ip_networks_id→ip_networks, vlans_id→vlans)
-- `sockets` (id, entities_id→entities, network_ports_id→network_ports)
-- `cables` (id, entities_id→entities, sockets_id_a→sockets, sockets_id_b)
+### Support
 
-### Tables système (2)
-- `audit_log` (id, table_name, record_id, action, old_values, new_values)
-- `archives_materiel` (id, source_table, source_id, data)
+- `ticket_categories(id, name, description)`
+- `tickets(id, entities_id -> entities, assets_id -> assets, requester_users_id -> users, assigned_groups_id -> groups, ticket_categories_id -> ticket_categories, status, priority, urgency, impact, ...)`
+- `ticket_users(id, tickets_id -> tickets, users_id -> users, assigned_by -> users, role)`
+- `ticket_followups(id, tickets_id -> tickets, users_id -> users, content, is_private)`
 
-**Total : 37 tables** (vs ~30 GLPI dans le périmètre, mais avec intégrité garantie)
+### Reseau
 
-## 4. Stratégie de distribution (BDDR)
+- `network_ports(id, entities_id -> entities, assets_id -> assets, name, mac, port_type, logical_number)`
+- `network_connections(id, network_ports_id_1 -> network_ports, network_ports_id_2 -> network_ports)`
+- `vlans(id, entities_id -> entities, name, tag)`
+- `network_port_vlans(id, network_ports_id -> network_ports, vlans_id -> vlans, tagged)`
+- `ip_networks(id, entities_id -> entities, vlans_id -> vlans, address, netmask, gateway)`
+- `ip_addresses(id, entities_id -> entities, network_ports_id -> network_ports, ip_networks_id -> ip_networks, address, version)`
 
-| Type de données | Stratégie | Justification |
-|---|---|---|
-| Matériels | **Fragmentation horizontale** | Chaque site stocke ses propres matériels |
-| Utilisateurs | **Fragmentation horizontale** | Comptes locaux à chaque site |
-| Tickets | **Fragmentation horizontale** | Tickets traités par le service IT du site concerné |
-| Référentiels | **Réplication** | Types, modèles, fabricants identiques partout |
-| Réseau | **Fragmentation horizontale** | Infrastructure locale à chaque site |
+### Systeme
 
-## 5. Scripts d'exécution
+- `audit_log(id, table_name, record_id, action, old_values, new_values, changed_by, change_date)`
+- `archives_materiel(id, source_table, source_id, data, archived_by, archive_date)`
 
-Exécuter dans l'ordre :
-1. `01_tablespaces.sql` — Création des tablespaces
-2. `02_schema_tables.sql` — Création des tables
-3. `03_users_roles.sql` — Utilisateurs et rôles Oracle
-4. `04_clusters_indexes.sql` — Clusters et index
-5. `05_views.sql` — Vues métier
-6. `06_plsql/triggers.sql` — Triggers
-7. `06_plsql/procedures.sql` — Procédures stockées
-8. `06_plsql/functions.sql` — Fonctions
-9. `06_plsql/cursors.sql` — Scripts de curseurs (exécution ponctuelle)
-10. `07_bddr.sql` — Configuration distribuée
-11. `08_query_plans.sql` — Analyse des performances
+**Total : 24 tables**, dont 22 fonctionnelles et 2 systeme.
+
+## 5. Strategie de distribution
+
+| Donnees | Strategie |
+|---|---|
+| Assets, utilisateurs, tickets, ports reseau | Fragmentation horizontale par `entities.site_code` |
+| Referentiels | Replication via `SP_REPLIQUER_REFERENTIELS` |
+| Reporting | Vues globales `V_ASSETS_GLOBAL`, `V_USERS_GLOBAL`, `V_STATS_GLOBAL`, `V_TICKETS_GLOBAL` |
+
+## 6. Ordre d'execution
+
+1. `01_tablespaces.sql`
+2. `02_schema_tables.sql`
+3. `03_users_roles.sql`
+4. `04_clusters_indexes.sql`
+5. `05_views.sql`
+6. `06_plsql/triggers.sql`
+7. `06_plsql/procedures.sql`
+8. `06_plsql/functions.sql`
+9. `06_plsql/cursors.sql`
+10. `07_bddr.sql`
+11. `08_query_plans.sql`
+12. `09_test_data.sql`
+13. `10_benchmark.sql`
