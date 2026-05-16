@@ -73,7 +73,7 @@ BEGIN
             )
             SELECT
                 id, :new_site_id, asset_type, name, serial_number,
-                NVL(:new_user_id, owner_user_id), technician_user_id, location_id,
+                :new_user_id, NULL, NULL,
                 manufacturer_id, state_id, created_at, SYSTIMESTAMP
             FROM assets
             WHERE id = :asset_id'
@@ -82,7 +82,9 @@ BEGIN
         EXECUTE IMMEDIATE
             'UPDATE assets@' || v_db_link || '
              SET site_id = :new_site_id,
-                 owner_user_id = NVL(:new_user_id, owner_user_id),
+                 owner_user_id = :new_user_id,
+                 technician_user_id = NULL,
+                 location_id = NULL,
                  updated_at = SYSTIMESTAMP
              WHERE id = :asset_id'
             USING p_new_site_id, p_new_user_id, p_asset_id;
@@ -100,6 +102,24 @@ BEGIN
         USING p_asset_id;
 
     EXECUTE IMMEDIATE
+        'DELETE FROM ticket_followups@' || v_db_link || '
+         WHERE ticket_id IN (
+             SELECT id FROM tickets@' || v_db_link || ' WHERE asset_id = :asset_id
+         )'
+        USING p_asset_id;
+
+    EXECUTE IMMEDIATE
+        'DELETE FROM ticket_users@' || v_db_link || '
+         WHERE ticket_id IN (
+             SELECT id FROM tickets@' || v_db_link || ' WHERE asset_id = :asset_id
+         )'
+        USING p_asset_id;
+
+    EXECUTE IMMEDIATE
+        'DELETE FROM tickets@' || v_db_link || ' WHERE asset_id = :asset_id'
+        USING p_asset_id;
+
+    EXECUTE IMMEDIATE
         'INSERT INTO network_ports@' || v_db_link || ' (
             id, site_id, asset_id, port_name, mac_address, port_type,
             created_at, updated_at
@@ -110,6 +130,72 @@ BEGIN
         FROM network_ports
         WHERE asset_id = :asset_id'
         USING p_new_site_id, p_asset_id;
+
+    EXECUTE IMMEDIATE
+        'INSERT INTO ip_addresses@' || v_db_link || ' (
+            id, site_id, network_port_id, ip_network_id, ip_address,
+            created_at, updated_at
+        )
+        SELECT
+            ip.id, :new_site_id, ip.network_port_id, NULL, ip.ip_address,
+            ip.created_at, SYSTIMESTAMP
+        FROM ip_addresses ip
+        JOIN network_ports np ON ip.network_port_id = np.id
+        WHERE np.asset_id = :asset_id'
+        USING p_new_site_id, p_asset_id;
+
+    EXECUTE IMMEDIATE
+        'INSERT INTO tickets@' || v_db_link || ' (
+            id, site_id, asset_id, title, description, status, priority,
+            requester_user_id, assigned_group_id, category_id, resolution,
+            created_at, updated_at, assigned_at, resolved_at, closed_at
+        )
+        SELECT
+            id, :new_site_id, asset_id, title, description, status, priority,
+            requester_user_id, NULL, category_id, resolution,
+            created_at, SYSTIMESTAMP, assigned_at, resolved_at, closed_at
+        FROM tickets
+        WHERE asset_id = :asset_id'
+        USING p_new_site_id, p_asset_id;
+
+    EXECUTE IMMEDIATE
+        'INSERT INTO ticket_users@' || v_db_link || ' (
+            id, ticket_id, user_id, assigned_by_user_id, assigned_at
+        )
+        SELECT
+            tu.id, tu.ticket_id, tu.user_id, tu.assigned_by_user_id, tu.assigned_at
+        FROM ticket_users tu
+        JOIN tickets t ON tu.ticket_id = t.id
+        WHERE t.asset_id = :asset_id'
+        USING p_asset_id;
+
+    EXECUTE IMMEDIATE
+        'INSERT INTO ticket_followups@' || v_db_link || ' (
+            id, ticket_id, user_id, content, created_at
+        )
+        SELECT
+            tf.id, tf.ticket_id, tf.user_id, tf.content, tf.created_at
+        FROM ticket_followups tf
+        JOIN tickets t ON tf.ticket_id = t.id
+        WHERE t.asset_id = :asset_id'
+        USING p_asset_id;
+
+    DELETE FROM ticket_followups
+    WHERE ticket_id IN (
+        SELECT id
+        FROM tickets
+        WHERE asset_id = p_asset_id
+    );
+
+    DELETE FROM ticket_users
+    WHERE ticket_id IN (
+        SELECT id
+        FROM tickets
+        WHERE asset_id = p_asset_id
+    );
+
+    DELETE FROM tickets
+    WHERE asset_id = p_asset_id;
 
     DELETE FROM ip_addresses
     WHERE network_port_id IN (

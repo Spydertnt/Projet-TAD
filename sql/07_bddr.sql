@@ -7,13 +7,25 @@
 -- Prerequis :
 -- - Instance Cergy : alias TNS XECERGY
 -- - Instance Pau   : alias TNS XEPAU
--- - Utilisateur admin_glpi cree sur les deux instances
+-- - Utilisateur distant cree sur l'instance cible
+--   Exemple reel : admin_glpi
+--   Exemple simulation locale : glpi_pau
 
--- DEFINE ADMIN_GLPI_PASSWORD = mot_de_passe_admin
+-- DEFINE BDDR_REMOTE_USER = admin_glpi
+-- DEFINE BDDR_REMOTE_PASSWORD = mot_de_passe_admin
+-- DEFINE BDDR_REMOTE_SERVICE = XEPAU
+--
+-- Pour la simulation locale :
+-- DEFINE BDDR_REMOTE_USER = glpi_pau
+-- DEFINE BDDR_REMOTE_PASSWORD = glpi_pau
+-- DEFINE BDDR_REMOTE_SERVICE = (DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=127.0.0.1)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XE)))
+--
+-- Si DBL_PAU existe deja, le supprimer avant de relancer :
+-- DROP DATABASE LINK DBL_PAU;
 
 CREATE DATABASE LINK DBL_PAU
-    CONNECT TO admin_glpi IDENTIFIED BY "mot_de_passe_admin"
-    USING 'XEPAU';
+    CONNECT TO &&BDDR_REMOTE_USER IDENTIFIED BY "&&BDDR_REMOTE_PASSWORD"
+    USING '&&BDDR_REMOTE_SERVICE';
 
 -- A executer sur l'instance de Pau :
 -- CREATE DATABASE LINK DBL_CERGY
@@ -29,10 +41,13 @@ CREATE SYNONYM ip_networks_pau FOR ip_networks@DBL_PAU;
 CREATE SYNONYM ip_addresses_pau FOR ip_addresses@DBL_PAU;
 CREATE SYNONYM tickets_pau FOR tickets@DBL_PAU;
 CREATE SYNONYM ticket_users_pau FOR ticket_users@DBL_PAU;
+CREATE SYNONYM ticket_followups_pau FOR ticket_followups@DBL_PAU;
 
 -- Strategie :
 -- - assets, users, tickets, network_ports, ip_networks, ip_addresses : fragmentation horizontale par sites.site_code
 -- - manufacturers, states, ticket_categories : replication
+-- - Un transfert inter-sites suppose que les sites et les utilisateurs referents
+--   existent sur l'instance cible avec les memes identifiants.
 
 CREATE OR REPLACE PROCEDURE SP_REPLIQUER_REFERENTIELS
 AS

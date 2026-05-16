@@ -25,6 +25,7 @@ AS
     v_ip_network_id NUMBER;
     v_manuf_id NUMBER;
     v_state_id NUMBER;
+    v_category_id NUMBER;
     v_asset_type VARCHAR2(50);
     v_site VARCHAR2(10);
     v_site_id NUMBER;
@@ -43,6 +44,7 @@ BEGIN
     DELETE FROM profiles_users;
     DELETE FROM assets;
     DELETE FROM users;
+    DELETE FROM profiles;
     DELETE FROM groups;
     DELETE FROM locations;
     DELETE FROM sites;
@@ -69,25 +71,39 @@ BEGIN
     VALUES (v_pau_id, 'Batiment B', 'CY Tech Pau > Batiment B', 'B', 'Open Space')
     RETURNING id INTO v_loc_pau_id;
 
-    INSERT INTO manufacturers (name) VALUES ('Dell');
-    INSERT INTO manufacturers (name) VALUES ('HP');
-    INSERT INTO manufacturers (name) VALUES ('Lenovo');
-    INSERT INTO manufacturers (name) VALUES ('Cisco');
-    INSERT INTO manufacturers (name) VALUES ('Epson');
+    BEGIN INSERT INTO manufacturers (name) VALUES ('Dell'); EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL; END;
+    BEGIN INSERT INTO manufacturers (name) VALUES ('HP'); EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL; END;
+    BEGIN INSERT INTO manufacturers (name) VALUES ('Lenovo'); EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL; END;
+    BEGIN INSERT INTO manufacturers (name) VALUES ('Cisco'); EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL; END;
+    BEGIN INSERT INTO manufacturers (name) VALUES ('Epson'); EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL; END;
 
-    INSERT INTO states (name) VALUES ('En service');
-    INSERT INTO states (name) VALUES ('En stock');
-    INSERT INTO states (name) VALUES ('En maintenance');
-    INSERT INTO states (name) VALUES ('Hors service');
+    BEGIN INSERT INTO states (name) VALUES ('En service'); EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL; END;
+    BEGIN INSERT INTO states (name) VALUES ('En stock'); EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL; END;
+    BEGIN INSERT INTO states (name) VALUES ('En maintenance'); EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL; END;
+    BEGIN INSERT INTO states (name) VALUES ('Hors service'); EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL; END;
 
-    INSERT INTO profiles (name, interface, is_default) VALUES ('Technicien', 'central', 0)
-    RETURNING id INTO v_profile_tech_id;
-    INSERT INTO profiles (name, interface, is_default) VALUES ('Utilisateur', 'helpdesk', 1)
-    RETURNING id INTO v_profile_user_id;
+    BEGIN
+        INSERT INTO profiles (name, interface, is_default) VALUES ('Technicien', 'central', 0)
+        RETURNING id INTO v_profile_tech_id;
+    EXCEPTION
+        WHEN DUP_VAL_ON_INDEX THEN
+            SELECT id INTO v_profile_tech_id FROM profiles WHERE name = 'Technicien';
+    END;
 
-    INSERT INTO ticket_categories (name, description) VALUES ('Incident materiel', 'Panne ou degradation d''un equipement');
-    INSERT INTO ticket_categories (name, description) VALUES ('Demande reseau', 'Demande liee aux ports, IP ou sous-reseaux');
-    INSERT INTO ticket_categories (name, description) VALUES ('Installation', 'Installation ou renouvellement de materiel');
+    BEGIN
+        INSERT INTO profiles (name, interface, is_default) VALUES ('Utilisateur', 'helpdesk', 1)
+        RETURNING id INTO v_profile_user_id;
+    EXCEPTION
+        WHEN DUP_VAL_ON_INDEX THEN
+            SELECT id INTO v_profile_user_id FROM profiles WHERE name = 'Utilisateur';
+    END;
+
+    BEGIN INSERT INTO ticket_categories (name, description) VALUES ('Incident materiel', 'Panne ou degradation d''un equipement'); EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL; END;
+    BEGIN INSERT INTO ticket_categories (name, description) VALUES ('Demande reseau', 'Demande liee aux ports, IP ou sous-reseaux'); EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL; END;
+    BEGIN INSERT INTO ticket_categories (name, description) VALUES ('Installation', 'Installation ou renouvellement de materiel'); EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL; END;
+    SELECT id INTO v_category_id
+    FROM ticket_categories
+    WHERE name = 'Incident materiel';
 
     INSERT INTO groups (site_id, name, full_name)
     VALUES (v_cergy_id, 'Support IT Cergy', 'CY Tech Cergy > Support IT')
@@ -233,7 +249,7 @@ BEGIN
                     CASE WHEN MOD(i, 75) = 0 THEN 'HAUTE' ELSE 'MOYENNE' END,
                     v_user_id,
                     v_group_id,
-                    1
+                    v_category_id
                 );
             END IF;
         END LOOP;
