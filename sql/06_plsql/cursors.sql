@@ -6,14 +6,14 @@
 
 DECLARE
     CURSOR c_inventaire_site (p_site VARCHAR2) IS
-        SELECT a.id, a.category, a.name, a.serial, e.name AS entite,
+        SELECT a.id, a.asset_type, a.name, a.serial_number, e.name AS entite,
                m.name AS fabricant, s.name AS etat
         FROM assets a
-            JOIN entities e ON a.entities_id = e.id
-            LEFT JOIN manufacturers m ON a.manufacturers_id = m.id
-            LEFT JOIN states s ON a.states_id = s.id
+            JOIN sites e ON a.site_id = e.id
+            LEFT JOIN manufacturers m ON a.manufacturer_id = m.id
+            LEFT JOIN states s ON a.state_id = s.id
         WHERE e.site_code = p_site
-        ORDER BY a.category, a.name;
+        ORDER BY a.asset_type, a.name;
 
     v_total NUMBER := 0;
 BEGIN
@@ -22,9 +22,9 @@ BEGIN
     FOR rec IN c_inventaire_site('CERGY') LOOP
         v_total := v_total + 1;
         DBMS_OUTPUT.PUT_LINE(
-            RPAD(rec.category, 18) || ' | ' ||
+            RPAD(rec.asset_type, 18) || ' | ' ||
             RPAD(rec.name, 25) || ' | ' ||
-            RPAD(NVL(rec.serial, 'N/A'), 15) || ' | ' ||
+            RPAD(NVL(rec.serial_number, 'N/A'), 15) || ' | ' ||
             NVL(rec.etat, '-')
         );
     END LOOP;
@@ -34,31 +34,33 @@ END;
 /
 
 DECLARE
-    CURSOR c_ports_orphelins IS
-        SELECT np.id, np.name AS port_name, np.mac,
+    CURSOR c_ports_sans_ip IS
+        SELECT np.id, np.port_name, np.mac_address,
                a.name AS equipement, e.site_code
         FROM network_ports np
-            LEFT JOIN network_connections nc1 ON np.id = nc1.network_ports_id_1
-            LEFT JOIN network_connections nc2 ON np.id = nc2.network_ports_id_2
-            JOIN assets a ON np.assets_id = a.id
-            JOIN entities e ON np.entities_id = e.id
-        WHERE nc1.id IS NULL AND nc2.id IS NULL;
+            JOIN assets a ON np.asset_id = a.id
+            JOIN sites e ON np.site_id = e.id
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM ip_addresses ia
+            WHERE ia.network_port_id = np.id
+        );
 
     v_count NUMBER := 0;
 BEGIN
-    DBMS_OUTPUT.PUT_LINE('PORTS RESEAU SANS CONNEXION');
+    DBMS_OUTPUT.PUT_LINE('PORTS RESEAU SANS ADRESSE IP');
 
-    FOR rec IN c_ports_orphelins LOOP
+    FOR rec IN c_ports_sans_ip LOOP
         v_count := v_count + 1;
         DBMS_OUTPUT.PUT_LINE(
             'Port: ' || RPAD(NVL(rec.port_name, 'N/A'), 15) ||
-            ' | MAC: ' || RPAD(NVL(rec.mac, 'N/A'), 18) ||
+            ' | MAC: ' || RPAD(NVL(rec.mac_address, 'N/A'), 18) ||
             ' | Equip: ' || RPAD(rec.equipement, 25) ||
             ' | Site: ' || rec.site_code
         );
     END LOOP;
 
-    DBMS_OUTPUT.PUT_LINE('Total ports orphelins: ' || v_count);
+    DBMS_OUTPUT.PUT_LINE('Total ports sans IP: ' || v_count);
 END;
 /
 
@@ -69,14 +71,14 @@ BEGIN
 
     FOR rec IN (
         SELECT u.id, u.login,
-               u.realname || ' ' || u.firstname AS nom_complet,
+               u.last_name || ' ' || u.first_name AS nom_complet,
                e.name AS entite, e.site_code
         FROM users u
-            JOIN entities e ON u.entities_id = e.id
-            LEFT JOIN profiles_users pu ON u.id = pu.users_id
+            JOIN sites e ON u.site_id = e.id
+            LEFT JOIN profiles_users pu ON u.id = pu.user_id
         WHERE pu.id IS NULL
           AND u.is_active = 1
-        ORDER BY e.site_code, u.realname
+        ORDER BY e.site_code, u.last_name
     ) LOOP
         v_count := v_count + 1;
         DBMS_OUTPUT.PUT_LINE(RPAD(rec.login, 20) || ' | ' || rec.entite);
@@ -100,10 +102,10 @@ BEGIN
 
     v_query := '
         SELECT e.name, e.site_code,
-               (SELECT COUNT(*) FROM assets WHERE entities_id = e.id),
-               (SELECT COUNT(*) FROM users WHERE entities_id = e.id),
-               (SELECT COUNT(*) FROM network_ports WHERE entities_id = e.id)
-        FROM entities e
+               (SELECT COUNT(*) FROM assets WHERE site_id = e.id),
+               (SELECT COUNT(*) FROM users WHERE site_id = e.id),
+               (SELECT COUNT(*) FROM network_ports WHERE site_id = e.id)
+        FROM sites e
         WHERE e.site_code IS NOT NULL
         ORDER BY e.site_code, e.name';
 

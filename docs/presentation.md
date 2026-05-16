@@ -16,36 +16,37 @@ Refonte simplifiee d'une base GLPI vers Oracle XE distribue entre Cergy et Pau.
 Centraliser l'inventaire dans une seule table :
 
 ```text
-assets(id, category, name, serial, users_id, locations_id, ...)
+assets(id, asset_type, name, serial_number, owner_user_id, location_id, ...)
 ```
 
-`category` remplace les anciennes tables separees : ordinateurs, ecrans, imprimantes, telephones, peripheriques et equipements reseau.
+`asset_type` remplace les anciennes tables separees : ordinateurs, ecrans, imprimantes, telephones, peripheriques et equipements reseau.
 
 ## Slide 4 - Resultat
 
-- 24 tables au lieu de 37
+- 19 tables au lieu de 37
 - FK simples et lisibles
-- Tickets relies a `assets_id`
-- Ports reseau relies a `assets_id`
+- Tickets relies a `asset_id`
+- Ports reseau relies a `asset_id`
 - Documentation MCD/MLD plus claire
 
 Schema MCD : `docs/diagrams/mcd.svg`
+Diagramme UML : `docs/diagrams/uml.svg`
 
 ## Slide 5 - Domaines conserves
 
 | Domaine | Tables principales |
 |---|---|
-| Organisation | `entities`, `locations` |
+| Organisation | `sites`, `locations` |
 | Utilisateurs | `users`, `profiles`, `groups` |
-| Inventaire | `assets`, `asset_models`, `manufacturers`, `states` |
+| Inventaire | `assets`, `manufacturers`, `states` |
 | Support | `tickets`, `ticket_users`, `ticket_followups` |
-| Reseau | `network_ports`, `vlans`, `ip_addresses` |
+| Reseau | `network_ports`, `ip_networks`, `ip_addresses` |
 
 ## Slide 6 - BDDR
 
 Schema d'architecture : `docs/diagrams/architecture.svg`
 
-- fragmentation horizontale par `entities.site_code`
+- fragmentation horizontale par `sites.site_code`
 - replication des referentiels
 - vues globales pour le reporting
 
@@ -62,12 +63,12 @@ Schema d'architecture : `docs/diagrams/architecture.svg`
 
 Index principaux :
 
-- `assets(entities_id, category)`
-- `assets(entities_id, states_id)`
+- `assets(site_id, asset_type)`
+- `assets(site_id, state_id)`
 - `UPPER(assets.name)`
-- `UPPER(assets.serial)`
-- `tickets(entities_id, status, priority)`
-- `network_ports(assets_id)`
+- `UPPER(assets.serial_number)`
+- `tickets(site_id, status, priority)`
+- `network_ports(asset_id)`
 
 ## Slide 9 - Conclusion
 

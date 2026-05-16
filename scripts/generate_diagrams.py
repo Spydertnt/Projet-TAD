@@ -105,17 +105,16 @@ def generate_architecture():
         ], color)
 
         svg.table(x + 245, y + 100, 180, "Donnees locales", [
-            "entities",
+            "sites",
             "locations",
             "users / groups",
             "assets",
             "tickets",
-            "network_ports",
+            "network_ports / IP",
         ], "#64748b")
 
         svg.table(x + 35, y + 310, 390, "Referentiels repliques", [
-            "manufacturers, states, networks",
-            "asset_models",
+            "manufacturers, states",
             "ticket_categories",
         ], "#7c3aed")
 
@@ -127,7 +126,7 @@ def generate_architecture():
 
     svg.rect(240, 680, 840, 86, "#ecfeff", "#67e8f9", 18)
     svg.text(660, 714, "Regle de distribution", 18, 800, "#0e7490", "middle")
-    svg.text(660, 744, "Les lignes operationnelles restent sur leur site selon entities.site_code.", 14, 600, "#155e75", "middle")
+    svg.text(660, 744, "Les lignes operationnelles restent sur leur site selon sites.site_code.", 14, 600, "#155e75", "middle")
     svg.text(660, 766, "Les vues globales interrogent les deux instances via V_ASSETS_GLOBAL, V_USERS_GLOBAL, V_TICKETS_GLOBAL.", 14, 600, "#155e75", "middle")
 
     svg.save(OUT / "architecture.svg")
@@ -139,28 +138,23 @@ def generate_mcd():
     svg.text(810, 72, "Table centrale assets, relations FK classiques et cardinalites lisibles", 15, 500, "#475569", "middle")
 
     boxes = {
-        "entities": (70, 130, 190, "#2563eb", ["PK id", "name", "site_code", "FK parent"]),
-        "locations": (330, 130, 190, "#2563eb", ["PK id", "FK entities_id", "name", "building / room"]),
-        "users": (590, 130, 200, "#0f766e", ["PK id", "login", "FK entities_id", "FK locations_id"]),
+        "sites": (70, 130, 190, "#2563eb", ["PK id", "name", "site_code", "FK parent"]),
+        "locations": (330, 130, 190, "#2563eb", ["PK id", "FK site_id", "name", "building / room"]),
+        "users": (590, 130, 200, "#0f766e", ["PK id", "login", "FK site_id", "FK location_id"]),
         "profiles": (850, 130, 185, "#0f766e", ["PK id", "name", "interface"]),
-        "groups": (1100, 130, 190, "#0f766e", ["PK id", "FK entities_id", "name", "FK parent"]),
-        "profiles_users": (850, 330, 210, "#0f766e", ["PK id", "FK users_id", "FK profiles_id", "FK entities_id"]),
-        "groups_users": (1100, 330, 205, "#0f766e", ["PK id", "FK users_id", "FK groups_id", "is_manager"]),
+        "groups": (1100, 130, 190, "#0f766e", ["PK id", "FK site_id", "name", "FK parent"]),
+        "profiles_users": (850, 330, 210, "#0f766e", ["PK id", "FK user_id", "FK profile_id", "FK site_id"]),
+        "groups_users": (1100, 330, 205, "#0f766e", ["PK id", "FK user_id", "FK group_id", "is_manager"]),
         "manufacturers": (70, 390, 190, "#7c3aed", ["PK id", "name"]),
         "states": (70, 550, 190, "#7c3aed", ["PK id", "name"]),
-        "networks": (70, 710, 190, "#7c3aed", ["PK id", "name"]),
-        "asset_models": (70, 870, 190, "#7c3aed", ["PK id", "category", "name"]),
-        "assets": (380, 470, 260, "#dc2626", ["PK id", "category", "name / serial", "FK entity/location", "FK user/tech", "FK refs"]),
+        "assets": (380, 470, 260, "#dc2626", ["PK id", "asset_type", "name / serial_number", "FK site/location", "FK owner/tech", "FK refs"]),
         "ticket_categories": (790, 580, 210, "#ea580c", ["PK id", "name", "description"]),
-        "tickets": (790, 750, 230, "#ea580c", ["PK id", "FK assets_id", "FK requester", "status / priority"]),
-        "ticket_users": (1080, 690, 220, "#ea580c", ["PK id", "FK tickets_id", "FK users_id", "role"]),
-        "ticket_followups": (1080, 870, 220, "#ea580c", ["PK id", "FK tickets_id", "FK users_id", "content"]),
-        "network_ports": (420, 760, 235, "#0891b2", ["PK id", "FK assets_id", "mac", "port_type"]),
-        "network_connections": (420, 960, 235, "#0891b2", ["PK id", "FK port_1", "FK port_2"]),
-        "vlans": (720, 960, 185, "#0891b2", ["PK id", "FK entities_id", "name", "tag"]),
-        "network_port_vlans": (960, 1010, 235, "#0891b2", ["PK id", "FK port", "FK vlan", "tagged"]),
-        "ip_networks": (1260, 760, 220, "#0891b2", ["PK id", "FK vlan", "address", "gateway"]),
-        "ip_addresses": (1260, 960, 220, "#0891b2", ["PK id", "FK port", "FK network", "address"]),
+        "tickets": (790, 750, 230, "#ea580c", ["PK id", "FK asset_id", "FK requester", "status / priority"]),
+        "ticket_users": (1080, 690, 220, "#ea580c", ["PK id", "FK ticket_id", "FK user_id", "assigned_at"]),
+        "ticket_followups": (1080, 870, 220, "#ea580c", ["PK id", "FK ticket_id", "FK user_id", "content"]),
+        "network_ports": (420, 760, 235, "#0891b2", ["PK id", "FK asset_id", "mac_address", "port_type"]),
+        "ip_networks": (760, 960, 220, "#0891b2", ["PK id", "FK site_id", "network_address", "gateway_address", "vlan_tag"]),
+        "ip_addresses": (1260, 960, 220, "#0891b2", ["PK id", "FK port", "FK network", "ip_address"]),
     }
 
     centers = {}
@@ -181,9 +175,9 @@ def generate_mcd():
         svg.rect(midx - 46, midy - 14, 92, 24, "#f8fafc", "#e2e8f0", 8)
         svg.text(midx, midy + 4, label, 11, 700, color, "middle")
 
-    connect("entities", "locations", "1,N")
-    connect("entities", "users", "1,N")
-    connect("entities", "groups", "1,N")
+    connect("sites", "locations", "1,N")
+    connect("sites", "users", "1,N")
+    connect("sites", "groups", "1,N")
     connect("users", "profiles_users", "1,N", "right", "left")
     connect("profiles", "profiles_users", "1,N", "bottom", "top")
     connect("users", "groups_users", "1,N", "right", "left")
@@ -193,8 +187,6 @@ def generate_mcd():
     connect("users", "assets", "1,N", "bottom", "top")
     connect("manufacturers", "assets", "1,N")
     connect("states", "assets", "1,N")
-    connect("networks", "assets", "1,N")
-    connect("asset_models", "assets", "1,N")
 
     connect("assets", "tickets", "1,N", "right", "left")
     connect("ticket_categories", "tickets", "1,N", "bottom", "top")
@@ -204,12 +196,8 @@ def generate_mcd():
     connect("groups", "tickets", "1,N", "bottom", "top", dash="5 5")
 
     connect("assets", "network_ports", "1,N", "bottom", "top")
-    connect("network_ports", "network_connections", "1,N", "bottom", "top")
-    connect("network_ports", "network_port_vlans", "1,N", "right", "left")
-    connect("vlans", "network_port_vlans", "1,N", "right", "left")
-    connect("vlans", "ip_networks", "1,N", "right", "left")
     connect("network_ports", "ip_addresses", "1,N", "right", "left", dash="5 5")
-    connect("ip_networks", "ip_addresses", "1,N", "bottom", "top")
+    connect("ip_networks", "ip_addresses", "1,N", "right", "left")
 
     svg.rect(1320, 130, 230, 172, "#ffffff", "#cbd5e1", 14)
     svg.text(1435, 162, "Legende", 18, 800, "#0f172a", "middle")

@@ -6,36 +6,45 @@
 
 CREATE OR REPLACE PROCEDURE SP_TRANSFERT_MATERIEL (
     p_asset_id      IN NUMBER,
-    p_new_entity_id IN NUMBER,
+    p_new_site_id IN NUMBER,
     p_new_user_id   IN NUMBER DEFAULT NULL
 )
 AS
-    v_old_entity NUMBER;
+    v_old_site_id NUMBER;
     v_old_site VARCHAR2(10);
     v_new_site VARCHAR2(10);
     v_asset_name VARCHAR2(255);
     v_db_link VARCHAR2(30);
     v_remote_count NUMBER;
 BEGIN
-    SELECT entities_id, name
-    INTO v_old_entity, v_asset_name
+    SELECT site_id, name
+    INTO v_old_site_id, v_asset_name
     FROM assets
     WHERE id = p_asset_id;
 
-    SELECT site_code INTO v_old_site FROM entities WHERE id = v_old_entity;
-    SELECT site_code INTO v_new_site FROM entities WHERE id = p_new_entity_id;
+    SELECT site_code INTO v_old_site FROM sites WHERE id = v_old_site_id;
+    SELECT site_code INTO v_new_site FROM sites WHERE id = p_new_site_id;
 
     IF v_old_site = v_new_site THEN
         UPDATE assets
-        SET entities_id = p_new_entity_id,
-            users_id = NVL(p_new_user_id, users_id),
-            date_mod = SYSTIMESTAMP
+        SET site_id = p_new_site_id,
+            owner_user_id = NVL(p_new_user_id, owner_user_id),
+            updated_at = SYSTIMESTAMP
         WHERE id = p_asset_id;
 
         UPDATE network_ports
-        SET entities_id = p_new_entity_id,
-            date_mod = SYSTIMESTAMP
-        WHERE assets_id = p_asset_id;
+        SET site_id = p_new_site_id,
+            updated_at = SYSTIMESTAMP
+        WHERE asset_id = p_asset_id;
+
+        UPDATE ip_addresses
+        SET site_id = p_new_site_id,
+            updated_at = SYSTIMESTAMP
+        WHERE network_port_id IN (
+            SELECT id
+            FROM network_ports
+            WHERE asset_id = p_asset_id
+        );
 
         COMMIT;
         DBMS_OUTPUT.PUT_LINE('Transfert local reussi: ' || v_asset_name);
@@ -58,51 +67,65 @@ BEGIN
     IF v_remote_count = 0 THEN
         EXECUTE IMMEDIATE
             'INSERT INTO assets@' || v_db_link || ' (
-                id, entities_id, category, name, serial, inventory_tag, uuid,
-                users_id, users_id_tech, locations_id, asset_models_id,
-                manufacturers_id, states_id, networks_id, notes, date_creation, date_mod
+                id, site_id, asset_type, name, serial_number,
+                owner_user_id, technician_user_id, location_id,
+                manufacturer_id, state_id, created_at, updated_at
             )
             SELECT
-                id, :new_entity_id, category, name, serial, inventory_tag, uuid,
-                NVL(:new_user_id, users_id), users_id_tech, locations_id, asset_models_id,
-                manufacturers_id, states_id, networks_id, notes, date_creation, SYSTIMESTAMP
+                id, :new_site_id, asset_type, name, serial_number,
+                NVL(:new_user_id, owner_user_id), technician_user_id, location_id,
+                manufacturer_id, state_id, created_at, SYSTIMESTAMP
             FROM assets
             WHERE id = :asset_id'
-            USING p_new_entity_id, p_new_user_id, p_asset_id;
+            USING p_new_site_id, p_new_user_id, p_asset_id;
     ELSE
         EXECUTE IMMEDIATE
             'UPDATE assets@' || v_db_link || '
-             SET entities_id = :new_entity_id,
-                 users_id = NVL(:new_user_id, users_id),
-                 date_mod = SYSTIMESTAMP
+             SET site_id = :new_site_id,
+                 owner_user_id = NVL(:new_user_id, owner_user_id),
+                 updated_at = SYSTIMESTAMP
              WHERE id = :asset_id'
-            USING p_new_entity_id, p_new_user_id, p_asset_id;
+            USING p_new_site_id, p_new_user_id, p_asset_id;
     END IF;
 
     EXECUTE IMMEDIATE
-        'DELETE FROM network_ports@' || v_db_link || ' WHERE assets_id = :asset_id'
+        'DELETE FROM ip_addresses@' || v_db_link || '
+         WHERE network_port_id IN (
+             SELECT id FROM network_ports@' || v_db_link || ' WHERE asset_id = :asset_id
+         )'
+        USING p_asset_id;
+
+    EXECUTE IMMEDIATE
+        'DELETE FROM network_ports@' || v_db_link || ' WHERE asset_id = :asset_id'
         USING p_asset_id;
 
     EXECUTE IMMEDIATE
         'INSERT INTO network_ports@' || v_db_link || ' (
-            id, entities_id, assets_id, name, mac, port_type, logical_number,
-            date_creation, date_mod
+            id, site_id, asset_id, port_name, mac_address, port_type,
+            created_at, updated_at
         )
         SELECT
-            id, :new_entity_id, assets_id, name, mac, port_type, logical_number,
-            date_creation, SYSTIMESTAMP
+            id, :new_site_id, asset_id, port_name, mac_address, port_type,
+            created_at, SYSTIMESTAMP
         FROM network_ports
-        WHERE assets_id = :asset_id'
-        USING p_new_entity_id, p_asset_id;
+        WHERE asset_id = :asset_id'
+        USING p_new_site_id, p_asset_id;
 
-    DELETE FROM network_ports WHERE assets_id = p_asset_id;
+    DELETE FROM ip_addresses
+    WHERE network_port_id IN (
+        SELECT id
+        FROM network_ports
+        WHERE asset_id = p_asset_id
+    );
+
+    DELETE FROM network_ports WHERE asset_id = p_asset_id;
     DELETE FROM assets WHERE id = p_asset_id;
 
     COMMIT;
     DBMS_OUTPUT.PUT_LINE('Transfert inter-sites reussi: ' || v_asset_name);
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20010, 'Materiel ou entite introuvable');
+        RAISE_APPLICATION_ERROR(-20010, 'Materiel ou site introuvable');
     WHEN OTHERS THEN
         ROLLBACK;
         RAISE_APPLICATION_ERROR(-20011, 'Erreur lors du transfert: ' || SQLERRM);
@@ -112,7 +135,7 @@ END SP_TRANSFERT_MATERIEL;
 CREATE OR REPLACE PROCEDURE SP_AFFECTER_PROFIL (
     p_user_id IN NUMBER,
     p_profile_id IN NUMBER,
-    p_entity_id IN NUMBER,
+    p_site_id IN NUMBER,
     p_is_recursive IN NUMBER DEFAULT 0
 )
 AS
@@ -120,19 +143,19 @@ AS
 BEGIN
     SELECT COUNT(*) INTO v_exists
     FROM profiles_users
-    WHERE users_id = p_user_id
-      AND profiles_id = p_profile_id
-      AND entities_id = p_entity_id;
+    WHERE user_id = p_user_id
+      AND profile_id = p_profile_id
+      AND site_id = p_site_id;
 
     IF v_exists > 0 THEN
         UPDATE profiles_users
         SET is_recursive = p_is_recursive
-        WHERE users_id = p_user_id
-          AND profiles_id = p_profile_id
-          AND entities_id = p_entity_id;
+        WHERE user_id = p_user_id
+          AND profile_id = p_profile_id
+          AND site_id = p_site_id;
     ELSE
-        INSERT INTO profiles_users (users_id, profiles_id, entities_id, is_recursive)
-        VALUES (p_user_id, p_profile_id, p_entity_id, p_is_recursive);
+        INSERT INTO profiles_users (user_id, profile_id, site_id, is_recursive)
+        VALUES (p_user_id, p_profile_id, p_site_id, p_is_recursive);
     END IF;
 
     COMMIT;
@@ -140,7 +163,7 @@ END SP_AFFECTER_PROFIL;
 /
 
 CREATE OR REPLACE PROCEDURE SP_CREER_TICKET_MATERIEL (
-    p_entity_id IN NUMBER,
+    p_site_id IN NUMBER,
     p_requester_id IN NUMBER,
     p_title IN VARCHAR2,
     p_description IN CLOB,
@@ -157,19 +180,19 @@ BEGIN
     SELECT COUNT(*) INTO v_asset_count
     FROM assets
     WHERE id = p_asset_id
-      AND entities_id = p_entity_id;
+      AND site_id = p_site_id;
 
     IF v_asset_count = 0 THEN
-        RAISE_APPLICATION_ERROR(-20051, 'Materiel introuvable dans l''entite indiquee');
+        RAISE_APPLICATION_ERROR(-20051, 'Materiel introuvable dans le site indique');
     END IF;
 
     INSERT INTO tickets (
-        entities_id, assets_id, title, description, priority,
-        requester_users_id, ticket_categories_id, assigned_groups_id,
-        status, date_assigned
+        site_id, asset_id, title, description, priority,
+        requester_user_id, category_id, assigned_group_id,
+        status, assigned_at
     )
     VALUES (
-        p_entity_id, p_asset_id, p_title, p_description, UPPER(p_priority),
+        p_site_id, p_asset_id, p_title, p_description, UPPER(p_priority),
         p_requester_id, p_category_id, p_assigned_group_id,
         CASE WHEN p_assigned_group_id IS NULL AND p_assigned_user_id IS NULL THEN 'NOUVEAU' ELSE 'ASSIGNE' END,
         CASE WHEN p_assigned_group_id IS NULL AND p_assigned_user_id IS NULL THEN NULL ELSE SYSTIMESTAMP END
@@ -177,7 +200,7 @@ BEGIN
     RETURNING id INTO p_ticket_id;
 
     IF p_assigned_user_id IS NOT NULL THEN
-        INSERT INTO ticket_users (tickets_id, users_id, assigned_by)
+        INSERT INTO ticket_users (ticket_id, user_id, assigned_by_user_id)
         VALUES (p_ticket_id, p_assigned_user_id, p_requester_id);
     END IF;
 
@@ -195,12 +218,12 @@ CREATE OR REPLACE PROCEDURE SP_ASSIGNER_TECH_TICKET (
 )
 AS
 BEGIN
-    INSERT INTO ticket_users (tickets_id, users_id, assigned_by)
+    INSERT INTO ticket_users (ticket_id, user_id, assigned_by_user_id)
     VALUES (p_ticket_id, p_user_id, p_assigned_by);
 
     UPDATE tickets
     SET status = CASE WHEN status = 'NOUVEAU' THEN 'ASSIGNE' ELSE status END,
-        date_assigned = NVL(date_assigned, SYSTIMESTAMP)
+        assigned_at = NVL(assigned_at, SYSTIMESTAMP)
     WHERE id = p_ticket_id;
 
     COMMIT;
@@ -220,19 +243,19 @@ AS
     v_nb_tickets NUMBER;
 BEGIN
     SELECT COUNT(*) INTO v_nb_assets
-    FROM assets a JOIN entities e ON a.entities_id = e.id
+    FROM assets a JOIN sites e ON a.site_id = e.id
     WHERE e.site_code = p_site_code;
 
     SELECT COUNT(*) INTO v_nb_users
-    FROM users u JOIN entities e ON u.entities_id = e.id
+    FROM users u JOIN sites e ON u.site_id = e.id
     WHERE e.site_code = p_site_code;
 
     SELECT COUNT(*) INTO v_nb_ports
-    FROM network_ports np JOIN entities e ON np.entities_id = e.id
+    FROM network_ports np JOIN sites e ON np.site_id = e.id
     WHERE e.site_code = p_site_code;
 
     SELECT COUNT(*) INTO v_nb_tickets
-    FROM tickets t JOIN entities e ON t.entities_id = e.id
+    FROM tickets t JOIN sites e ON t.site_id = e.id
     WHERE e.site_code = p_site_code;
 
     DBMS_OUTPUT.PUT_LINE('Inventaire site ' || p_site_code);
@@ -252,7 +275,7 @@ BEGIN
     v_date_limite := SYSTIMESTAMP - NUMTOYMINTERVAL(p_nb_mois, 'MONTH');
 
     DELETE FROM archives_materiel
-    WHERE archive_date < v_date_limite;
+    WHERE archived_at < v_date_limite;
 
     DBMS_OUTPUT.PUT_LINE(SQL%ROWCOUNT || ' archives supprimees.');
     COMMIT;

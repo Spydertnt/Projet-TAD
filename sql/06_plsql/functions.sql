@@ -13,7 +13,7 @@ BEGIN
     SELECT COUNT(*)
     INTO v_total
     FROM assets a
-        JOIN entities e ON a.entities_id = e.id
+        JOIN sites e ON a.site_id = e.id
     WHERE e.site_code = p_site_code;
 
     RETURN v_total;
@@ -28,25 +28,23 @@ CREATE OR REPLACE FUNCTION FN_CALCULER_TAUX_UTILISATION (
 ) RETURN NUMBER
 AS
     v_total_ports NUMBER;
-    v_ports_connectes NUMBER;
+    v_ports_adresses NUMBER;
 BEGIN
     SELECT COUNT(*) INTO v_total_ports
     FROM network_ports
-    WHERE assets_id = p_asset_id;
+    WHERE asset_id = p_asset_id;
 
     IF v_total_ports = 0 THEN
         RETURN 0;
     END IF;
 
-    SELECT COUNT(*) INTO v_ports_connectes
+    SELECT COUNT(DISTINCT np.id) INTO v_ports_adresses
     FROM network_ports np
-    WHERE np.assets_id = p_asset_id
-      AND (
-          EXISTS (SELECT 1 FROM network_connections nc WHERE nc.network_ports_id_1 = np.id)
-          OR EXISTS (SELECT 1 FROM network_connections nc WHERE nc.network_ports_id_2 = np.id)
-      );
+        JOIN ip_addresses ia ON ia.network_port_id = np.id
+    WHERE np.asset_id = p_asset_id
+      AND ia.ip_address IS NOT NULL;
 
-    RETURN ROUND((v_ports_connectes / v_total_ports) * 100, 2);
+    RETURN ROUND((v_ports_adresses / v_total_ports) * 100, 2);
 EXCEPTION
     WHEN OTHERS THEN
         RETURN -1;
@@ -54,18 +52,18 @@ END FN_CALCULER_TAUX_UTILISATION;
 /
 
 CREATE OR REPLACE FUNCTION FN_OBTENIR_SITE_ENTITE (
-    p_entities_id IN NUMBER
+    p_site_id IN NUMBER
 ) RETURN VARCHAR2
 AS
     v_site_code VARCHAR2(10);
-    v_current_id NUMBER := p_entities_id;
+    v_current_id NUMBER := p_site_id;
     v_parent_id NUMBER;
     v_max_depth NUMBER := 10;
 BEGIN
     WHILE v_current_id IS NOT NULL AND v_max_depth > 0 LOOP
-        SELECT site_code, entities_id
+        SELECT site_code, parent_site_id
         INTO v_site_code, v_parent_id
-        FROM entities
+        FROM sites
         WHERE id = v_current_id;
 
         IF v_site_code IS NOT NULL THEN

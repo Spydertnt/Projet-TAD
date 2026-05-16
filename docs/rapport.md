@@ -11,23 +11,23 @@ Le modele final couvre quatre domaines essentiels :
 
 | Domaine | Role |
 |---|---|
-| Organisation | Sites, entites et localisations |
+| Organisation | Sites, services et localisations |
 | Utilisateurs | Comptes, profils et groupes |
 | Inventaire | Tous les materiels dans une table unique `assets` |
-| Support et reseau | Tickets, ports, VLAN, IP et connexions |
+| Support et reseau | Tickets, ports reseau, sous-reseaux et IP |
 
 ## 2. Choix de simplification
 
-Le premier schema contenait 37 tables et restait trop proche de GLPI. La version simplifiee conserve **24 tables**, dont 22 fonctionnelles et 2 systeme.
+Le premier schema contenait 37 tables et restait trop proche de GLPI. La version simplifiee conserve **19 tables**, dont 17 fonctionnelles et 2 systeme.
 
 | Avant | Apres |
 |---|---|
-| `computers`, `monitors`, `peripherals`, `printers`, `phones`, `network_equipments` | `assets(category, ...)` |
-| Plusieurs FK nullable dans `tickets` | Une FK `tickets.assets_id` |
-| Plusieurs FK nullable dans `network_ports` | Une FK `network_ports.assets_id` |
-| `asset_types` + `asset_models` | `asset_models` et `assets.category` |
+| `computers`, `monitors`, `peripherals`, `printers`, `phones`, `network_equipments` | `assets(asset_type, ...)` |
+| Plusieurs FK nullable dans `tickets` | Une FK `tickets.asset_id` |
+| Plusieurs FK nullable dans `network_ports` | Une FK `network_ports.asset_id` |
+| Tables de types et modeles materiel | Suppression des modeles, conservation de `assets.asset_type` |
 | `user_titles`, `user_categories`, `profile_rights` | Supprimes du noyau |
-| FQDN, sockets, cables, tables de liaison IP/VLAN avancees | Reseau recentre sur ports, VLAN, IP |
+| FQDN, sockets, cables, connexions port-a-port, VLANs detailles | Reseau recentre sur ports, sous-reseaux IP et adresses IP |
 
 Cette simplification rend le schema plus facile a expliquer et evite les relations polymorphes artificielles.
 
@@ -35,36 +35,33 @@ Cette simplification rend le schema plus facile a expliquer et evite les relatio
 
 ### Transversal
 
-- `entities` : hierarchie des sites et entites, avec `site_code`
+- `sites` : hierarchie des sites et services, avec `site_code`
 - `locations` : batiments et salles
-- `manufacturers`, `states`, `networks`, `asset_models` : referentiels
+- `manufacturers`, `states` : referentiels
 
 ### Utilisateurs
 
-- `users` : comptes rattaches a une entite et une localisation
+- `users` : comptes rattaches a un site et une localisation
 - `profiles` : profils applicatifs
-- `profiles_users` : affectation utilisateur/profil/entite
+- `profiles_users` : affectation utilisateur/profil/site
 - `groups`, `groups_users` : groupes support et membres
 
 ### Inventaire
 
 - `assets` : table centrale des materiels
 
-La colonne `category` distingue les categories : `COMPUTER`, `MONITOR`, `PERIPHERAL`, `PRINTER`, `PHONE`, `NETWORK_EQUIPMENT`.
+La colonne `asset_type` distingue les categories : `COMPUTER`, `MONITOR`, `PERIPHERAL`, `PRINTER`, `PHONE`, `NETWORK_EQUIPMENT`.
 
 ### Support
 
 - `ticket_categories`
-- `tickets`, relies a un seul materiel par `assets_id`
+- `tickets`, relies a un seul materiel par `asset_id`
 - `ticket_users`
 - `ticket_followups`
 
 ### Reseau
 
 - `network_ports`
-- `network_connections`
-- `vlans`
-- `network_port_vlans`
 - `ip_networks`
 - `ip_addresses`
 
@@ -75,14 +72,14 @@ La colonne `category` distingue les categories : `COMPUTER`, `MONITOR`, `PERIPHE
 
 ## 4. Architecture BDDR
 
-La base est distribuee entre Cergy et Pau. Les donnees operationnelles sont fragmentees horizontalement selon `entities.site_code`.
+La base est distribuee entre Cergy et Pau. Les donnees operationnelles sont fragmentees horizontalement selon `sites.site_code`.
 
 ![Schema d'architecture](diagrams/architecture.svg)
 
 | Donnees | Strategie |
 |---|---|
-| `assets`, `users`, `tickets`, `network_ports` | Fragmentation horizontale |
-| `manufacturers`, `states`, `networks`, `asset_models`, `ticket_categories` | Replication |
+| `assets`, `users`, `tickets`, `network_ports`, `ip_networks`, `ip_addresses` | Fragmentation horizontale |
+| `manufacturers`, `states`, `ticket_categories` | Replication |
 | Reporting global | Vues distribuees via DB Link |
 
 Le script `07_bddr.sql` fournit les DB Links, les synonymes, la procedure `SP_REPLIQUER_REFERENTIELS` et les vues globales.
@@ -91,15 +88,20 @@ Le script `07_bddr.sql` fournit les DB Links, les synonymes, la procedure `SP_RE
 
 ![MCD simplifie](diagrams/mcd.svg)
 
-Les schemas sont generes par le script `scripts/generate_diagrams.py`, ce qui permet de produire de vrais fichiers SVG versionnables et reutilisables dans le rapport ou la presentation.
+## 4.2 Diagramme UML
+
+![Diagramme UML](diagrams/uml.svg)
+
+Le diagramme UML presente le modele sous forme de classes metier : sites, utilisateurs, inventaire, tickets et reseau, avec les multiplicites principales.
+
+Les schemas d'architecture et de MCD sont generes par `scripts/generate_diagrams.py`. Le diagramme UML est genere separement par `scripts/generate_uml_diagram.py`, ce qui evite de modifier le generateur des schemas existants.
 
 ## 5. PL/SQL
 
 | Objet | Role |
 |---|---|
-| `TRG_AUTO_DATE_MOD_ASSETS` | Mise a jour automatique de `date_mod` |
+| `TRG_AUTO_DATE_MOD_ASSETS` | Mise a jour automatique de `updated_at` |
 | `TRG_AUDIT_ASSETS` | Journalisation des modifications d'inventaire |
-| `TRG_CHECK_ASSET_MODEL_CATEGORY` | Verification modele/categorie |
 | `TRG_CHECK_TICKET_USER_TECH` | Controle des techniciens affectes |
 | `SP_TRANSFERT_MATERIEL` | Transfert local ou inter-sites d'un asset |
 | `SP_CREER_TICKET_MATERIEL` | Creation d'un ticket sur un asset |
@@ -112,9 +114,9 @@ Les index sont concentres sur les usages principaux :
 - recherche d'assets par nom et numero de serie
 - inventaire par site, categorie, etat et utilisateur
 - suivi des tickets par site, statut et priorite
-- jointures reseau autour de `network_ports.assets_id`
+- jointures reseau autour de `network_ports.asset_id`
 
-Le benchmark `10_benchmark.sql` mesure six requetes representatives : recherche par nom, inventaire, tickets ouverts, recherche par serial, topologie reseau et utilisateurs/profils.
+Le benchmark `10_benchmark.sql` mesure six requetes representatives : recherche par nom, inventaire, tickets ouverts, recherche par serial_number, reseau des appareils et utilisateurs/profils.
 
 ## 7. Conclusion
 

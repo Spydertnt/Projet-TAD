@@ -51,9 +51,9 @@ BEGIN
         'Q2',
         'Inventaire par site et categorie',
         p_scenario,
-        'SELECT e.site_code, a.category, COUNT(*) nb
-         FROM assets a JOIN entities e ON a.entities_id = e.id
-         GROUP BY e.site_code, a.category'
+        'SELECT e.site_code, a.asset_type, COUNT(*) nb
+         FROM assets a JOIN sites e ON a.site_id = e.id
+         GROUP BY e.site_code, a.asset_type'
     );
 
     SP_BENCHMARK_QUERY(
@@ -70,19 +70,18 @@ BEGIN
         'Q4',
         'Recherche materiel par numero de serie',
         p_scenario,
-        'SELECT a.id FROM assets a WHERE UPPER(a.serial) = ''SN-2026-CERGY-00001'''
+        'SELECT a.id FROM assets a WHERE UPPER(a.serial_number) = ''SN-2026-CERGY-00001'''
     );
 
     SP_BENCHMARK_QUERY(
         'Q5',
-        'Topologie reseau',
+        'Reseau des appareils',
         p_scenario,
-        'SELECT a.name, np.name, v.name, ia.address
+        'SELECT a.name, np.port_name, ipn.network_name, ipn.vlan_tag, ia.ip_address
          FROM assets a
-             JOIN network_ports np ON np.assets_id = a.id
-             LEFT JOIN network_port_vlans npv ON npv.network_ports_id = np.id
-             LEFT JOIN vlans v ON npv.vlans_id = v.id
-             LEFT JOIN ip_addresses ia ON ia.network_ports_id = np.id'
+             JOIN network_ports np ON np.asset_id = a.id
+             LEFT JOIN ip_addresses ia ON ia.network_port_id = np.id
+             LEFT JOIN ip_networks ipn ON ia.ip_network_id = ipn.id'
     );
 
     SP_BENCHMARK_QUERY(
@@ -91,8 +90,8 @@ BEGIN
         p_scenario,
         'SELECT u.login, p.name
          FROM users u
-             JOIN profiles_users pu ON pu.users_id = u.id
-             JOIN profiles p ON p.id = pu.profiles_id'
+             JOIN profiles_users pu ON pu.user_id = u.id
+             JOIN profiles p ON p.id = pu.profile_id'
     );
 END SP_RUN_BENCHMARK_ASSETS;
 /
