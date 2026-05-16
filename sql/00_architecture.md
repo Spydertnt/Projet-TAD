@@ -2,7 +2,7 @@
 
 ## 1. Vue d'ensemble
 
-Le modele cible remplace le schema GLPI tres fragmente par une architecture Oracle distribuee entre deux sites, Cergy et Pau. La simplification principale consiste a centraliser tous les materiels dans une seule table `assets`.
+Le modele cible remplace le schema GLPI tres fragmente par une architecture Oracle multi-sites entre Cergy et Pau. Sur un seul PC, la BDDR est simulee avec deux schemas locaux, `GLPI_CERGY` et `GLPI_PAU`. La simplification principale consiste a centraliser tous les materiels dans une seule table `assets`.
 
 ![Schema d'architecture](../docs/diagrams/architecture.svg)
 
@@ -83,7 +83,7 @@ La colonne `asset_type` porte le type fonctionnel : `COMPUTER`, `MONITOR`, `PERI
 | Donnees | Strategie |
 |---|---|
 | Assets, utilisateurs, tickets, ports reseau, sous-reseaux et IP | Fragmentation horizontale par `sites.site_code` |
-| Referentiels | Replication via `SP_REPLIQUER_REFERENTIELS` |
+| Referentiels | Exposition dans les deux schemas via vues locales |
 | Reporting | Vues globales `V_ASSETS_GLOBAL`, `V_USERS_GLOBAL`, `V_STATS_GLOBAL`, `V_TICKETS_GLOBAL` |
 
 ## 6. Ordre d'execution
@@ -97,7 +97,7 @@ La colonne `asset_type` porte le type fonctionnel : `COMPUTER`, `MONITOR`, `PERI
 7. `06_plsql/procedures.sql`
 8. `06_plsql/functions.sql`
 9. `06_plsql/cursors.sql`
-10. `07_bddr.sql`
+10. `09_test_data.sql`
 11. `08_query_plans.sql`
-12. `09_test_data.sql`
-13. `10_benchmark.sql`
+12. `10_benchmark.sql`
+13. `07_bddr.sql`

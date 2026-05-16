@@ -72,7 +72,7 @@ La colonne `asset_type` distingue les categories : `COMPUTER`, `MONITOR`, `PERIP
 
 ## 4. Architecture BDDR
 
-La base est distribuee entre Cergy et Pau. Les donnees operationnelles sont fragmentees horizontalement selon `sites.site_code`.
+La base est concue pour etre distribuee entre Cergy et Pau. Sur un seul PC, la BDDR est simulee avec deux schemas Oracle locaux : `GLPI_CERGY` et `GLPI_PAU`. Les donnees operationnelles sont fragmentees horizontalement selon `sites.site_code`.
 
 ![Schema d'architecture](diagrams/architecture.svg)
 
@@ -80,9 +80,9 @@ La base est distribuee entre Cergy et Pau. Les donnees operationnelles sont frag
 |---|---|
 | `assets`, `users`, `tickets`, `network_ports`, `ip_networks`, `ip_addresses` | Fragmentation horizontale |
 | `manufacturers`, `states`, `ticket_categories` | Replication |
-| Reporting global | Vues distribuees via DB Link |
+| Reporting global | Vues globales entre les deux schemas locaux |
 
-Le script `07_bddr.sql` fournit les DB Links, les synonymes, la procedure `SP_REPLIQUER_REFERENTIELS` et les vues globales.
+Le script `07_bddr.sql` cree les schemas de simulation, les vues locales, les synonymes et les vues globales.
 
 ## 4.1 MCD
 

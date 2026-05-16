@@ -85,7 +85,7 @@ class Svg:
 def generate_architecture():
     svg = Svg(1320, 820, "Architecture Oracle XE distribuee Cergy Pau")
     svg.text(660, 46, "Architecture Oracle XE distribuee - Cergy / Pau", 28, 800, "#0f172a", "middle")
-    svg.text(660, 76, "Fragmentation horizontale des donnees operationnelles, replication des referentiels", 15, 500, "#475569", "middle")
+    svg.text(660, 76, "Simulation BDDR locale par deux schemas Oracle et fragmentation par site", 15, 500, "#475569", "middle")
 
     sites = [
         ("SITE CERGY", 70, 140, "#2563eb"),
@@ -94,7 +94,7 @@ def generate_architecture():
     for label, x, y, color in sites:
         svg.rect(x, y, 460, 490, "#ffffff", "#cbd5e1", 18)
         svg.text(x + 230, y + 38, label, 22, 800, color, "middle")
-        svg.text(x + 230, y + 66, "Oracle XE - instance locale", 14, 600, "#475569", "middle")
+        svg.text(x + 230, y + 66, "Schema Oracle local", 14, 600, "#475569", "middle")
 
         svg.table(x + 35, y + 100, 180, "Tablespaces", [
             "TS_MATERIEL",
@@ -113,21 +113,21 @@ def generate_architecture():
             "network_ports / IP",
         ], "#64748b")
 
-        svg.table(x + 35, y + 310, 390, "Referentiels repliques", [
+        svg.table(x + 35, y + 310, 390, "Referentiels exposes", [
             "manufacturers, states",
             "ticket_categories",
         ], "#7c3aed")
 
     svg.line(535, 315, 785, 315, "#334155", 3, arrow=True)
     svg.line(785, 370, 535, 370, "#334155", 3, arrow=True)
-    svg.text(660, 300, "DB Link", 18, 800, "#0f172a", "middle")
+    svg.text(660, 300, "Vues globales", 18, 800, "#0f172a", "middle")
     svg.text(660, 348, "requete distante", 13, 600, "#475569", "middle")
-    svg.text(660, 402, "replication referentiels", 13, 600, "#475569", "middle")
+    svg.text(660, 402, "schemas GLPI_CERGY / GLPI_PAU", 13, 600, "#475569", "middle")
 
     svg.rect(240, 680, 840, 86, "#ecfeff", "#67e8f9", 18)
     svg.text(660, 714, "Regle de distribution", 18, 800, "#0e7490", "middle")
     svg.text(660, 744, "Les lignes operationnelles restent sur leur site selon sites.site_code.", 14, 600, "#155e75", "middle")
-    svg.text(660, 766, "Les vues globales interrogent les deux instances via V_ASSETS_GLOBAL, V_USERS_GLOBAL, V_TICKETS_GLOBAL.", 14, 600, "#155e75", "middle")
+    svg.text(660, 766, "Les vues globales interrogent les schemas GLPI_CERGY et GLPI_PAU.", 14, 600, "#155e75", "middle")
 
     svg.save(OUT / "architecture.svg")
 

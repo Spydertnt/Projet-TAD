@@ -12,7 +12,9 @@ La table centrale est `assets`. Elle remplace les tables separees de GLPI comme 
 ## Architecture
 
 ```text
-Oracle XE - Cergy  <------ DB Link ------>  Oracle XE - Pau
+Oracle XE local
+|-- schema GLPI_CERGY : vues du fragment Cergy
+`-- schema GLPI_PAU   : vues du fragment Pau
 
 Donnees fragmentees par site :
 - assets
@@ -29,6 +31,7 @@ Referentiels repliques :
 ```
 
 Le champ `sites.site_code` indique le site proprietaire des donnees : `CERGY` ou `PAU`.
+La BDDR est simulee sur un seul PC avec deux utilisateurs Oracle locaux.
 
 ## Structure
 
@@ -48,6 +51,7 @@ Projet-TAD/
 |   `-- generate_uml_diagram.py
 `-- sql/
     |-- 00_architecture.md
+    |-- 00_run_all.sql
     |-- 01_tablespaces.sql
     |-- 02_schema_tables.sql
     |-- 03_users_roles.sql
@@ -62,6 +66,15 @@ Projet-TAD/
 
 ## Execution
 
+Execution simple :
+
+```sql
+CONNECT system/mot_de_passe@localhost:1521/XE
+START H:\Desktop\S4\Administration_et_traitement_des_donnees\Projet-TAD\sql\00_run_all.sql
+```
+
+Execution fichier par fichier :
+
 ```sql
 @01_tablespaces.sql
 @02_schema_tables.sql
@@ -72,10 +85,10 @@ Projet-TAD/
 @06_plsql/procedures.sql
 @06_plsql/functions.sql
 @06_plsql/cursors.sql
-@07_bddr.sql
-@08_query_plans.sql
 @09_test_data.sql
+@08_query_plans.sql
 @10_benchmark.sql
+@07_bddr.sql
 ```
 
 ## Diagrammes

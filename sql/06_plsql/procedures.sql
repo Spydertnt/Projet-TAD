@@ -14,8 +14,6 @@ AS
     v_old_site VARCHAR2(10);
     v_new_site VARCHAR2(10);
     v_asset_name VARCHAR2(255);
-    v_db_link VARCHAR2(30);
-    v_remote_count NUMBER;
 BEGIN
     SELECT site_id, name
     INTO v_old_site_id, v_asset_name
@@ -25,104 +23,33 @@ BEGIN
     SELECT site_code INTO v_old_site FROM sites WHERE id = v_old_site_id;
     SELECT site_code INTO v_new_site FROM sites WHERE id = p_new_site_id;
 
-    IF v_old_site = v_new_site THEN
-        UPDATE assets
-        SET site_id = p_new_site_id,
-            owner_user_id = NVL(p_new_user_id, owner_user_id),
-            updated_at = SYSTIMESTAMP
-        WHERE id = p_asset_id;
-
-        UPDATE network_ports
-        SET site_id = p_new_site_id,
-            updated_at = SYSTIMESTAMP
-        WHERE asset_id = p_asset_id;
-
-        UPDATE ip_addresses
-        SET site_id = p_new_site_id,
-            updated_at = SYSTIMESTAMP
-        WHERE network_port_id IN (
-            SELECT id
-            FROM network_ports
-            WHERE asset_id = p_asset_id
-        );
-
-        COMMIT;
-        DBMS_OUTPUT.PUT_LINE('Transfert local reussi: ' || v_asset_name);
-        RETURN;
-    END IF;
-
-    IF v_new_site = 'PAU' THEN
-        v_db_link := 'DBL_PAU';
-    ELSIF v_new_site = 'CERGY' THEN
-        v_db_link := 'DBL_CERGY';
-    ELSE
+    IF v_new_site NOT IN ('CERGY', 'PAU') THEN
         RAISE_APPLICATION_ERROR(-20012, 'Site destination non supporte');
     END IF;
 
-    EXECUTE IMMEDIATE
-        'SELECT COUNT(*) FROM assets@' || v_db_link || ' WHERE id = :asset_id'
-        INTO v_remote_count
-        USING p_asset_id;
+    UPDATE assets
+    SET site_id = p_new_site_id,
+        owner_user_id = NVL(p_new_user_id, owner_user_id),
+        updated_at = SYSTIMESTAMP
+    WHERE id = p_asset_id;
 
-    IF v_remote_count = 0 THEN
-        EXECUTE IMMEDIATE
-            'INSERT INTO assets@' || v_db_link || ' (
-                id, site_id, asset_type, name, serial_number,
-                owner_user_id, technician_user_id, location_id,
-                manufacturer_id, state_id, created_at, updated_at
-            )
-            SELECT
-                id, :new_site_id, asset_type, name, serial_number,
-                NVL(:new_user_id, owner_user_id), technician_user_id, location_id,
-                manufacturer_id, state_id, created_at, SYSTIMESTAMP
-            FROM assets
-            WHERE id = :asset_id'
-            USING p_new_site_id, p_new_user_id, p_asset_id;
-    ELSE
-        EXECUTE IMMEDIATE
-            'UPDATE assets@' || v_db_link || '
-             SET site_id = :new_site_id,
-                 owner_user_id = NVL(:new_user_id, owner_user_id),
-                 updated_at = SYSTIMESTAMP
-             WHERE id = :asset_id'
-            USING p_new_site_id, p_new_user_id, p_asset_id;
-    END IF;
+    UPDATE network_ports
+    SET site_id = p_new_site_id,
+        updated_at = SYSTIMESTAMP
+    WHERE asset_id = p_asset_id;
 
-    EXECUTE IMMEDIATE
-        'DELETE FROM ip_addresses@' || v_db_link || '
-         WHERE network_port_id IN (
-             SELECT id FROM network_ports@' || v_db_link || ' WHERE asset_id = :asset_id
-         )'
-        USING p_asset_id;
-
-    EXECUTE IMMEDIATE
-        'DELETE FROM network_ports@' || v_db_link || ' WHERE asset_id = :asset_id'
-        USING p_asset_id;
-
-    EXECUTE IMMEDIATE
-        'INSERT INTO network_ports@' || v_db_link || ' (
-            id, site_id, asset_id, port_name, mac_address, port_type,
-            created_at, updated_at
-        )
-        SELECT
-            id, :new_site_id, asset_id, port_name, mac_address, port_type,
-            created_at, SYSTIMESTAMP
-        FROM network_ports
-        WHERE asset_id = :asset_id'
-        USING p_new_site_id, p_asset_id;
-
-    DELETE FROM ip_addresses
+    UPDATE ip_addresses
+    SET site_id = p_new_site_id,
+        updated_at = SYSTIMESTAMP
     WHERE network_port_id IN (
         SELECT id
         FROM network_ports
         WHERE asset_id = p_asset_id
     );
 
-    DELETE FROM network_ports WHERE asset_id = p_asset_id;
-    DELETE FROM assets WHERE id = p_asset_id;
-
     COMMIT;
-    DBMS_OUTPUT.PUT_LINE('Transfert inter-sites reussi: ' || v_asset_name);
+    DBMS_OUTPUT.PUT_LINE('Transfert inter-sites simule reussi: ' || v_asset_name ||
+                         ' (' || v_old_site || ' -> ' || v_new_site || ')');
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
         RAISE_APPLICATION_ERROR(-20010, 'Materiel ou site introuvable');
