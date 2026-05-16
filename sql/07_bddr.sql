@@ -1,248 +1,470 @@
 -- ============================================================
 -- 07_bddr.sql
--- Base de Données Répartie (BDDR) — Cergy / Pau
--- Oracle XE — Database Links, Synonymes, Vues distribuées
--- ============================================================
--- PRÉREQUIS :
--- - Deux instances Oracle XE configurées (une par site)
--- - Instance Cergy : SID = XECERGY (ou service name)
--- - Instance Pau   : SID = XEPAU
--- - Connexion réseau entre les deux serveurs (tnsnames.ora)
+-- Simulation BDDR sur une seule instance Oracle XE
+-- Deux schemas locaux + DATABASE LINK local
 -- ============================================================
 
--- =========================
--- 1. CONFIGURATION TNS (à ajouter dans tnsnames.ora)
--- =========================
--- XECERGY =
---   (DESCRIPTION =
---     (ADDRESS = (PROTOCOL = TCP)(HOST = srv-cergy)(PORT = 1521))
---     (CONNECT_DATA = (SERVICE_NAME = XEPDB1))
---   )
+-- Objectif :
+-- Simuler deux bases reparties sur un seul PC avec un DB Link local.
 --
--- XEPAU =
---   (DESCRIPTION =
---     (ADDRESS = (PROTOCOL = TCP)(HOST = srv-pau)(PORT = 1521))
---     (CONNECT_DATA = (SERVICE_NAME = XEPDB1))
---   )
-
--- =========================
--- 2. DATABASE LINKS
--- =========================
-
--- Avant execution SQL*Plus/SQLcl :
--- DEFINE ADMIN_GLPI_PASSWORD = mot_de_passe_admin
-
--- Depuis le site CERGY → accès au site PAU
-CREATE DATABASE LINK DBL_PAU
-    CONNECT TO admin_glpi IDENTIFIED BY "&&ADMIN_GLPI_PASSWORD"
-    USING 'XEPAU';
-
--- Depuis le site PAU → accès au site CERGY
--- (à exécuter sur l'instance de Pau)
--- CREATE DATABASE LINK DBL_CERGY
---     CONNECT TO admin_glpi IDENTIFIED BY "&&ADMIN_GLPI_PASSWORD"
---     USING 'XECERGY';
-
--- Test du lien :
--- SELECT * FROM computers@DBL_PAU WHERE ROWNUM <= 5;
-
--- =========================
--- 3. SYNONYMES
--- Accès transparent aux tables distantes
--- =========================
-
--- Synonymes pour accéder aux tables de Pau depuis Cergy
-CREATE SYNONYM computers_pau FOR computers@DBL_PAU;
-CREATE SYNONYM monitors_pau FOR monitors@DBL_PAU;
-CREATE SYNONYM peripherals_pau FOR peripherals@DBL_PAU;
-CREATE SYNONYM printers_pau FOR printers@DBL_PAU;
-CREATE SYNONYM phones_pau FOR phones@DBL_PAU;
-CREATE SYNONYM network_equipments_pau FOR network_equipments@DBL_PAU;
-CREATE SYNONYM users_pau FOR users@DBL_PAU;
-CREATE SYNONYM network_ports_pau FOR network_ports@DBL_PAU;
-CREATE SYNONYM entities_pau FOR entities@DBL_PAU;
-CREATE SYNONYM tickets_pau FOR tickets@DBL_PAU;
-CREATE SYNONYM ticket_users_pau FOR ticket_users@DBL_PAU;
-CREATE SYNONYM ticket_followups_pau FOR ticket_followups@DBL_PAU;
-CREATE SYNONYM ticket_categories_pau FOR ticket_categories@DBL_PAU;
-
--- =========================
--- 4. FRAGMENTATION HORIZONTALE
--- Chaque site stocke ses propres matériels
--- =========================
-
--- Les données sont réparties selon le site_code de l'entité :
--- - Site CERGY : entities.site_code = 'CERGY' → stocké sur instance Cergy
--- - Site PAU   : entities.site_code = 'PAU'   → stocké sur instance Pau
+-- Le schema principal contient les tables physiques.
+-- Les schemas GLPI_CERGY et GLPI_PAU exposent chacun une fragmentation locale
+-- via des vues filtrees sur sites.site_code.
 --
--- L'insertion est guidee par la procedure SP_TRANSFERT_MATERIEL.
--- Pour un transfert inter-sites, elle copie l'ordinateur et ses ports
--- directs via DB link, puis supprime les lignes locales transferees.
+-- A lancer avec SYSTEM apres :
+-- 01_tablespaces.sql, 02_schema_tables.sql, 04_clusters_indexes.sql,
+-- 03_users_roles.sql, 05_views.sql, 06_plsql/functions.sql et 09_test_data.sql.
 
--- =========================
--- 5. TABLES RÉPLIQUÉES (référentiels communs)
--- Les tables de référence sont identiques sur les deux sites
--- =========================
+-- A adapter si les tables physiques ne sont pas dans SYSTEM.
+DEFINE BASE_SCHEMA = SYSTEM
 
--- Procédure de réplication des référentiels
+-- Mots de passe des deux schemas de simulation.
+DEFINE GLPI_CERGY_PASSWORD = glpi_cergy_pwd
+DEFINE GLPI_PAU_PASSWORD = glpi_pau_pwd
+
+-- Connexion locale utilisee par les DB links.
+-- Si ton service Oracle est different, remplace XE par XEPDB1 ou ton service.
+-- Exemples :
+-- DEFINE LOCAL_CONNECT_ALIAS = localhost:1521/XE
+-- DEFINE LOCAL_CONNECT_ALIAS = localhost:1521/XEPDB1
+DEFINE LOCAL_CONNECT_ALIAS = localhost:1521/XE
+
+-- ============================================================
+-- 1. CREATION DES DEUX SCHEMAS LOCAUX
+-- ============================================================
+
+BEGIN
+    EXECUTE IMMEDIATE 'CREATE USER glpi_cergy IDENTIFIED BY "&&GLPI_CERGY_PASSWORD"
+        DEFAULT TABLESPACE TS_MATERIEL
+        TEMPORARY TABLESPACE TS_TEMP_GLPI
+        QUOTA 0 ON TS_MATERIEL';
+EXCEPTION WHEN OTHERS THEN
+    IF SQLCODE = -1920 THEN
+        EXECUTE IMMEDIATE 'ALTER USER glpi_cergy IDENTIFIED BY "&&GLPI_CERGY_PASSWORD"';
+    ELSE
+        RAISE;
+    END IF;
+END;
+/
+
+BEGIN
+    EXECUTE IMMEDIATE 'CREATE USER glpi_pau IDENTIFIED BY "&&GLPI_PAU_PASSWORD"
+        DEFAULT TABLESPACE TS_MATERIEL
+        TEMPORARY TABLESPACE TS_TEMP_GLPI
+        QUOTA 0 ON TS_MATERIEL';
+EXCEPTION WHEN OTHERS THEN
+    IF SQLCODE = -1920 THEN
+        EXECUTE IMMEDIATE 'ALTER USER glpi_pau IDENTIFIED BY "&&GLPI_PAU_PASSWORD"';
+    ELSE
+        RAISE;
+    END IF;
+END;
+/
+
+GRANT CREATE SESSION, CREATE VIEW, CREATE SYNONYM, CREATE DATABASE LINK, CREATE PROCEDURE TO glpi_cergy;
+GRANT CREATE SESSION, CREATE VIEW, CREATE SYNONYM, CREATE DATABASE LINK TO glpi_pau;
+
+-- Droits de lecture directs necessaires pour compiler les vues des schemas.
+GRANT SELECT ON sites TO glpi_cergy;
+GRANT SELECT ON locations TO glpi_cergy;
+GRANT SELECT ON manufacturers TO glpi_cergy;
+GRANT SELECT ON states TO glpi_cergy;
+GRANT SELECT ON users TO glpi_cergy;
+GRANT SELECT ON profiles TO glpi_cergy;
+GRANT SELECT ON profiles_users TO glpi_cergy;
+GRANT SELECT ON groups TO glpi_cergy;
+GRANT SELECT ON groups_users TO glpi_cergy;
+GRANT SELECT ON assets TO glpi_cergy;
+GRANT SELECT ON ticket_categories TO glpi_cergy;
+GRANT SELECT ON tickets TO glpi_cergy;
+GRANT SELECT ON ticket_users TO glpi_cergy;
+GRANT SELECT ON ticket_followups TO glpi_cergy;
+GRANT SELECT ON network_ports TO glpi_cergy;
+GRANT SELECT ON ip_networks TO glpi_cergy;
+GRANT SELECT ON ip_addresses TO glpi_cergy;
+
+GRANT SELECT ON sites TO glpi_pau;
+GRANT SELECT ON locations TO glpi_pau;
+GRANT SELECT ON manufacturers TO glpi_pau;
+GRANT SELECT ON states TO glpi_pau;
+GRANT SELECT ON users TO glpi_pau;
+GRANT SELECT ON profiles TO glpi_pau;
+GRANT SELECT ON profiles_users TO glpi_pau;
+GRANT SELECT ON groups TO glpi_pau;
+GRANT SELECT ON groups_users TO glpi_pau;
+GRANT SELECT ON assets TO glpi_pau;
+GRANT SELECT ON ticket_categories TO glpi_pau;
+GRANT SELECT ON tickets TO glpi_pau;
+GRANT SELECT ON ticket_users TO glpi_pau;
+GRANT SELECT ON ticket_followups TO glpi_pau;
+GRANT SELECT ON network_ports TO glpi_pau;
+GRANT SELECT ON ip_networks TO glpi_pau;
+GRANT SELECT ON ip_addresses TO glpi_pau;
+
+-- ============================================================
+-- 2. FRAGMENT CERGY
+-- ============================================================
+
+CREATE OR REPLACE VIEW glpi_cergy.sites AS
+SELECT *
+FROM &&BASE_SCHEMA..sites
+WHERE site_code = 'CERGY';
+
+CREATE OR REPLACE VIEW glpi_cergy.locations AS
+SELECT l.*
+FROM &&BASE_SCHEMA..locations l
+    JOIN &&BASE_SCHEMA..sites s ON l.site_id = s.id
+WHERE s.site_code = 'CERGY';
+
+CREATE OR REPLACE VIEW glpi_cergy.users AS
+SELECT u.*
+FROM &&BASE_SCHEMA..users u
+    JOIN &&BASE_SCHEMA..sites s ON u.site_id = s.id
+WHERE s.site_code = 'CERGY';
+
+CREATE OR REPLACE VIEW glpi_cergy.groups AS
+SELECT g.*
+FROM &&BASE_SCHEMA..groups g
+    JOIN &&BASE_SCHEMA..sites s ON g.site_id = s.id
+WHERE s.site_code = 'CERGY';
+
+CREATE OR REPLACE VIEW glpi_cergy.groups_users AS
+SELECT gu.*
+FROM &&BASE_SCHEMA..groups_users gu
+    JOIN &&BASE_SCHEMA..groups g ON gu.group_id = g.id
+    JOIN &&BASE_SCHEMA..sites s ON g.site_id = s.id
+WHERE s.site_code = 'CERGY';
+
+CREATE OR REPLACE VIEW glpi_cergy.profiles_users AS
+SELECT pu.*
+FROM &&BASE_SCHEMA..profiles_users pu
+    JOIN &&BASE_SCHEMA..sites s ON pu.site_id = s.id
+WHERE s.site_code = 'CERGY';
+
+CREATE OR REPLACE VIEW glpi_cergy.assets AS
+SELECT a.*
+FROM &&BASE_SCHEMA..assets a
+    JOIN &&BASE_SCHEMA..sites s ON a.site_id = s.id
+WHERE s.site_code = 'CERGY';
+
+CREATE OR REPLACE VIEW glpi_cergy.tickets AS
+SELECT
+    t.id,
+    t.site_id,
+    t.asset_id,
+    t.title,
+    t.status,
+    t.priority,
+    t.requester_user_id,
+    t.assigned_group_id,
+    t.category_id,
+    t.created_at,
+    t.updated_at,
+    t.assigned_at,
+    t.resolved_at,
+    t.closed_at
+FROM &&BASE_SCHEMA..tickets t
+    JOIN &&BASE_SCHEMA..sites s ON t.site_id = s.id
+WHERE s.site_code = 'CERGY';
+
+CREATE OR REPLACE VIEW glpi_cergy.ticket_users AS
+SELECT tu.*
+FROM &&BASE_SCHEMA..ticket_users tu
+    JOIN &&BASE_SCHEMA..tickets t ON tu.ticket_id = t.id
+    JOIN &&BASE_SCHEMA..sites s ON t.site_id = s.id
+WHERE s.site_code = 'CERGY';
+
+CREATE OR REPLACE VIEW glpi_cergy.ticket_followups AS
+SELECT tf.*
+FROM &&BASE_SCHEMA..ticket_followups tf
+    JOIN &&BASE_SCHEMA..tickets t ON tf.ticket_id = t.id
+    JOIN &&BASE_SCHEMA..sites s ON t.site_id = s.id
+WHERE s.site_code = 'CERGY';
+
+CREATE OR REPLACE VIEW glpi_cergy.network_ports AS
+SELECT np.*
+FROM &&BASE_SCHEMA..network_ports np
+    JOIN &&BASE_SCHEMA..sites s ON np.site_id = s.id
+WHERE s.site_code = 'CERGY';
+
+CREATE OR REPLACE VIEW glpi_cergy.ip_networks AS
+SELECT ipn.*
+FROM &&BASE_SCHEMA..ip_networks ipn
+    JOIN &&BASE_SCHEMA..sites s ON ipn.site_id = s.id
+WHERE s.site_code = 'CERGY';
+
+CREATE OR REPLACE VIEW glpi_cergy.ip_addresses AS
+SELECT ia.*
+FROM &&BASE_SCHEMA..ip_addresses ia
+    JOIN &&BASE_SCHEMA..sites s ON ia.site_id = s.id
+WHERE s.site_code = 'CERGY';
+
+-- Referentiels repliques logiquement.
+CREATE OR REPLACE VIEW glpi_cergy.manufacturers AS SELECT * FROM &&BASE_SCHEMA..manufacturers;
+CREATE OR REPLACE VIEW glpi_cergy.states AS SELECT * FROM &&BASE_SCHEMA..states;
+CREATE OR REPLACE VIEW glpi_cergy.profiles AS SELECT * FROM &&BASE_SCHEMA..profiles;
+CREATE OR REPLACE VIEW glpi_cergy.ticket_categories AS SELECT * FROM &&BASE_SCHEMA..ticket_categories;
+
+-- ============================================================
+-- 3. FRAGMENT PAU
+-- ============================================================
+
+CREATE OR REPLACE VIEW glpi_pau.sites AS
+SELECT *
+FROM &&BASE_SCHEMA..sites
+WHERE site_code = 'PAU';
+
+CREATE OR REPLACE VIEW glpi_pau.locations AS
+SELECT l.*
+FROM &&BASE_SCHEMA..locations l
+    JOIN &&BASE_SCHEMA..sites s ON l.site_id = s.id
+WHERE s.site_code = 'PAU';
+
+CREATE OR REPLACE VIEW glpi_pau.users AS
+SELECT u.*
+FROM &&BASE_SCHEMA..users u
+    JOIN &&BASE_SCHEMA..sites s ON u.site_id = s.id
+WHERE s.site_code = 'PAU';
+
+CREATE OR REPLACE VIEW glpi_pau.groups AS
+SELECT g.*
+FROM &&BASE_SCHEMA..groups g
+    JOIN &&BASE_SCHEMA..sites s ON g.site_id = s.id
+WHERE s.site_code = 'PAU';
+
+CREATE OR REPLACE VIEW glpi_pau.groups_users AS
+SELECT gu.*
+FROM &&BASE_SCHEMA..groups_users gu
+    JOIN &&BASE_SCHEMA..groups g ON gu.group_id = g.id
+    JOIN &&BASE_SCHEMA..sites s ON g.site_id = s.id
+WHERE s.site_code = 'PAU';
+
+CREATE OR REPLACE VIEW glpi_pau.profiles_users AS
+SELECT pu.*
+FROM &&BASE_SCHEMA..profiles_users pu
+    JOIN &&BASE_SCHEMA..sites s ON pu.site_id = s.id
+WHERE s.site_code = 'PAU';
+
+CREATE OR REPLACE VIEW glpi_pau.assets AS
+SELECT a.*
+FROM &&BASE_SCHEMA..assets a
+    JOIN &&BASE_SCHEMA..sites s ON a.site_id = s.id
+WHERE s.site_code = 'PAU';
+
+CREATE OR REPLACE VIEW glpi_pau.tickets AS
+SELECT
+    t.id,
+    t.site_id,
+    t.asset_id,
+    t.title,
+    t.status,
+    t.priority,
+    t.requester_user_id,
+    t.assigned_group_id,
+    t.category_id,
+    t.created_at,
+    t.updated_at,
+    t.assigned_at,
+    t.resolved_at,
+    t.closed_at
+FROM &&BASE_SCHEMA..tickets t
+    JOIN &&BASE_SCHEMA..sites s ON t.site_id = s.id
+WHERE s.site_code = 'PAU';
+
+CREATE OR REPLACE VIEW glpi_pau.ticket_users AS
+SELECT tu.*
+FROM &&BASE_SCHEMA..ticket_users tu
+    JOIN &&BASE_SCHEMA..tickets t ON tu.ticket_id = t.id
+    JOIN &&BASE_SCHEMA..sites s ON t.site_id = s.id
+WHERE s.site_code = 'PAU';
+
+CREATE OR REPLACE VIEW glpi_pau.ticket_followups AS
+SELECT tf.*
+FROM &&BASE_SCHEMA..ticket_followups tf
+    JOIN &&BASE_SCHEMA..tickets t ON tf.ticket_id = t.id
+    JOIN &&BASE_SCHEMA..sites s ON t.site_id = s.id
+WHERE s.site_code = 'PAU';
+
+CREATE OR REPLACE VIEW glpi_pau.network_ports AS
+SELECT np.*
+FROM &&BASE_SCHEMA..network_ports np
+    JOIN &&BASE_SCHEMA..sites s ON np.site_id = s.id
+WHERE s.site_code = 'PAU';
+
+CREATE OR REPLACE VIEW glpi_pau.ip_networks AS
+SELECT ipn.*
+FROM &&BASE_SCHEMA..ip_networks ipn
+    JOIN &&BASE_SCHEMA..sites s ON ipn.site_id = s.id
+WHERE s.site_code = 'PAU';
+
+CREATE OR REPLACE VIEW glpi_pau.ip_addresses AS
+SELECT ia.*
+FROM &&BASE_SCHEMA..ip_addresses ia
+    JOIN &&BASE_SCHEMA..sites s ON ia.site_id = s.id
+WHERE s.site_code = 'PAU';
+
+-- Referentiels repliques logiquement.
+CREATE OR REPLACE VIEW glpi_pau.manufacturers AS SELECT * FROM &&BASE_SCHEMA..manufacturers;
+CREATE OR REPLACE VIEW glpi_pau.states AS SELECT * FROM &&BASE_SCHEMA..states;
+CREATE OR REPLACE VIEW glpi_pau.profiles AS SELECT * FROM &&BASE_SCHEMA..profiles;
+CREATE OR REPLACE VIEW glpi_pau.ticket_categories AS SELECT * FROM &&BASE_SCHEMA..ticket_categories;
+
+-- ============================================================
+-- 4. DB LINK LOCAL : GLPI_CERGY -> GLPI_PAU
+-- ============================================================
+
+CONNECT glpi_cergy/&&GLPI_CERGY_PASSWORD@&&LOCAL_CONNECT_ALIAS
+
+BEGIN
+    EXECUTE IMMEDIATE 'DROP DATABASE LINK lien_pau';
+EXCEPTION WHEN OTHERS THEN
+    IF SQLCODE != -2024 THEN
+        RAISE;
+    END IF;
+END;
+/
+
+CREATE DATABASE LINK lien_pau
+    CONNECT TO glpi_pau IDENTIFIED BY "&&GLPI_PAU_PASSWORD"
+    USING '&&LOCAL_CONNECT_ALIAS';
+
+CREATE OR REPLACE SYNONYM assets_pau FOR assets@lien_pau;
+CREATE OR REPLACE SYNONYM users_pau FOR users@lien_pau;
+CREATE OR REPLACE SYNONYM sites_pau FOR sites@lien_pau;
+CREATE OR REPLACE SYNONYM tickets_pau FOR tickets@lien_pau;
+CREATE OR REPLACE SYNONYM network_ports_pau FOR network_ports@lien_pau;
+CREATE OR REPLACE SYNONYM ip_networks_pau FOR ip_networks@lien_pau;
+CREATE OR REPLACE SYNONYM ip_addresses_pau FOR ip_addresses@lien_pau;
+
 CREATE OR REPLACE PROCEDURE SP_REPLIQUER_REFERENTIELS
 AS
 BEGIN
-    -- Réplication des fabricants
-    MERGE INTO manufacturers@DBL_PAU dest
-    USING manufacturers src ON (dest.id = src.id)
-    WHEN MATCHED THEN
-        UPDATE SET dest.name = src.name,
-                   dest.date_mod = src.date_mod
-    WHEN NOT MATCHED THEN
-        INSERT (id, name, date_creation, date_mod)
-        VALUES (src.id, src.name, src.date_creation, src.date_mod);
-
-    -- Réplication des états
-    MERGE INTO states@DBL_PAU dest
-    USING states src ON (dest.id = src.id)
-    WHEN MATCHED THEN
-        UPDATE SET dest.name = src.name,
-                   dest.date_mod = src.date_mod
-    WHEN NOT MATCHED THEN
-        INSERT (id, name, entities_id, date_creation, date_mod)
-        VALUES (src.id, src.name, src.entities_id,
-                src.date_creation, src.date_mod);
-
-    -- Réplication des types d'assets
-    MERGE INTO asset_types@DBL_PAU dest
-    USING asset_types src ON (dest.id = src.id)
-    WHEN MATCHED THEN
-        UPDATE SET dest.name = src.name,
-                   dest.category = src.category,
-                   dest.date_mod = src.date_mod
-    WHEN NOT MATCHED THEN
-        INSERT (id, category, name, date_creation, date_mod)
-        VALUES (src.id, src.category, src.name,
-                src.date_creation, src.date_mod);
-
-    -- Réplication des modèles d'assets
-    MERGE INTO asset_models@DBL_PAU dest
-    USING asset_models src ON (dest.id = src.id)
-    WHEN MATCHED THEN
-        UPDATE SET dest.name = src.name,
-                   dest.category = src.category,
-                   dest.date_mod = src.date_mod
-    WHEN NOT MATCHED THEN
-        INSERT (id, category, name, date_creation, date_mod)
-        VALUES (src.id, src.category, src.name,
-                src.date_creation, src.date_mod);
-
-    -- Replication des categories de tickets
-    MERGE INTO ticket_categories@DBL_PAU dest
-    USING ticket_categories src ON (dest.id = src.id)
-    WHEN MATCHED THEN
-        UPDATE SET dest.name = src.name,
-                   dest.description = src.description,
-                   dest.date_mod = src.date_mod
-    WHEN NOT MATCHED THEN
-        INSERT (id, name, description, date_creation, date_mod)
-        VALUES (src.id, src.name, src.description,
-                src.date_creation, src.date_mod);
-
-    -- Réplication des réseaux
-    MERGE INTO networks@DBL_PAU dest
-    USING networks src ON (dest.id = src.id)
-    WHEN MATCHED THEN
-        UPDATE SET dest.name = src.name
-    WHEN NOT MATCHED THEN
-        INSERT (id, name) VALUES (src.id, src.name);
-
-    COMMIT;
-    DBMS_OUTPUT.PUT_LINE('Réplication des référentiels terminée.');
-EXCEPTION
-    WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE_APPLICATION_ERROR(-20040,
-            'Erreur réplication: ' || SQLERRM);
+    DBMS_OUTPUT.PUT_LINE('Simulation DB Link locale : GLPI_CERGY interroge GLPI_PAU via lien_pau.');
+    DBMS_OUTPUT.PUT_LINE('Les referentiels sont exposes par vues dans les deux schemas.');
 END SP_REPLIQUER_REFERENTIELS;
 /
 
--- =========================
--- 6. VUES DISTRIBUÉES
--- Requêtes fédérées sur les deux sites
--- =========================
-
--- Vue globale des ordinateurs (les deux sites)
-CREATE OR REPLACE VIEW V_COMPUTERS_GLOBAL AS
-SELECT c.*, 'CERGY' AS source_site
-FROM computers c
-    JOIN entities e ON c.entities_id = e.id
-WHERE e.site_code = 'CERGY'
+CREATE OR REPLACE VIEW V_ASSETS_GLOBAL AS
+SELECT a.id, a.asset_type, a.name, a.serial_number, a.site_id,
+       s.name AS entite, s.site_code AS site, 'GLPI_CERGY' AS source_schema
+FROM assets a
+    JOIN sites s ON a.site_id = s.id
 UNION ALL
-SELECT c.*, 'PAU' AS source_site
-FROM computers@DBL_PAU c
-    JOIN entities@DBL_PAU e ON c.entities_id = e.id
-WHERE e.site_code = 'PAU';
+SELECT a.id, a.asset_type, a.name, a.serial_number, a.site_id,
+       s.name AS entite, s.site_code AS site, 'GLPI_PAU@LIEN_PAU' AS source_schema
+FROM assets@lien_pau a
+    JOIN sites@lien_pau s ON a.site_id = s.id;
 
--- Vue globale des utilisateurs
 CREATE OR REPLACE VIEW V_USERS_GLOBAL AS
-SELECT u.id, u.name, u.realname, u.firstname, u.email,
-       e.name AS entite, 'CERGY' AS source_site
-FROM users u JOIN entities e ON u.entities_id = e.id
-WHERE e.site_code = 'CERGY'
+SELECT u.id, u.login, u.last_name, u.first_name, u.email,
+       s.name AS entite, s.site_code AS site, 'GLPI_CERGY' AS source_schema
+FROM users u
+    JOIN sites s ON u.site_id = s.id
 UNION ALL
-SELECT u.id, u.name, u.realname, u.firstname, u.email,
-       e.name AS entite, 'PAU' AS source_site
-FROM users@DBL_PAU u
-    JOIN entities@DBL_PAU e ON u.entities_id = e.id
-WHERE e.site_code = 'PAU';
+SELECT u.id, u.login, u.last_name, u.first_name, u.email,
+       s.name AS entite, s.site_code AS site, 'GLPI_PAU@LIEN_PAU' AS source_schema
+FROM users@lien_pau u
+    JOIN sites@lien_pau s ON u.site_id = s.id;
 
--- Vue globale des statistiques des deux sites
 CREATE OR REPLACE VIEW V_STATS_GLOBAL AS
-SELECT 'CERGY' AS site,
-       FN_COMPTER_MATERIEL_SITE('CERGY') AS total_materiel
-FROM DUAL
+SELECT 'CERGY' AS site, COUNT(*) AS total_materiel
+FROM assets
 UNION ALL
-SELECT 'PAU' AS site,
-       (SELECT COUNT(*) FROM computers@DBL_PAU) +
-       (SELECT COUNT(*) FROM monitors@DBL_PAU) +
-       (SELECT COUNT(*) FROM printers@DBL_PAU) AS total_materiel
-FROM DUAL;
+SELECT 'PAU' AS site, COUNT(*) AS total_materiel
+FROM assets@lien_pau;
 
--- Vue globale des tickets support
 CREATE OR REPLACE VIEW V_TICKETS_GLOBAL AS
-SELECT t.id, t.title, t.status, t.priority, t.requester_users_id,
-       t.assigned_groups_id,
-       (
-           SELECT LISTAGG(u.realname || ' ' || u.firstname, ', ')
-                  WITHIN GROUP (ORDER BY u.realname, u.firstname)
-           FROM ticket_users tu
-               JOIN users u ON tu.users_id = u.id
-           WHERE tu.tickets_id = t.id
-       ) AS techniciens,
-       t.date_creation,
-       e.name AS entite, 'CERGY' AS source_site
+SELECT t.id, t.title, t.status, t.priority, a.name AS materiel,
+       s.name AS entite, 'GLPI_CERGY' AS source_schema
 FROM tickets t
-    JOIN entities e ON t.entities_id = e.id
-WHERE e.site_code = 'CERGY'
+    JOIN assets a ON t.asset_id = a.id
+    JOIN sites s ON t.site_id = s.id
 UNION ALL
-SELECT t.id, t.title, t.status, t.priority, t.requester_users_id,
-       t.assigned_groups_id,
-       (
-           SELECT LISTAGG(u.realname || ' ' || u.firstname, ', ')
-                  WITHIN GROUP (ORDER BY u.realname, u.firstname)
-           FROM ticket_users@DBL_PAU tu
-               JOIN users@DBL_PAU u ON tu.users_id = u.id
-           WHERE tu.tickets_id = t.id
-       ) AS techniciens,
-       t.date_creation,
-       e.name AS entite, 'PAU' AS source_site
-FROM tickets@DBL_PAU t
-    JOIN entities@DBL_PAU e ON t.entities_id = e.id
-WHERE e.site_code = 'PAU';
+SELECT t.id, t.title, t.status, t.priority, a.name AS materiel,
+       s.name AS entite, 'GLPI_PAU@LIEN_PAU' AS source_schema
+FROM tickets@lien_pau t
+    JOIN assets@lien_pau a ON t.asset_id = a.id
+    JOIN sites@lien_pau s ON t.site_id = s.id;
 
--- =========================
--- 7. REQUÊTE DISTRIBUÉE EXEMPLE
--- Jointure entre données locales et distantes
--- =========================
+-- Verification rapide.
+SELECT 'GLPI_CERGY.assets' AS objet, COUNT(*) AS nb_lignes FROM assets
+UNION ALL
+SELECT 'GLPI_PAU.assets via lien_pau', COUNT(*) FROM assets@lien_pau
+UNION ALL
+SELECT 'V_ASSETS_GLOBAL', COUNT(*) FROM V_ASSETS_GLOBAL;
 
--- Trouver tous les ordinateurs Dell sur les deux sites
--- SELECT * FROM V_COMPUTERS_GLOBAL cg
---     JOIN manufacturers m ON cg.manufacturers_id = m.id
--- WHERE m.name = 'Dell';
+-- ============================================================
+-- 5. DB LINK LOCAL INVERSE : GLPI_PAU -> GLPI_CERGY
+-- ============================================================
+
+CONNECT glpi_pau/&&GLPI_PAU_PASSWORD@&&LOCAL_CONNECT_ALIAS
+
+BEGIN
+    EXECUTE IMMEDIATE 'DROP DATABASE LINK lien_cergy';
+EXCEPTION WHEN OTHERS THEN
+    IF SQLCODE != -2024 THEN
+        RAISE;
+    END IF;
+END;
+/
+
+CREATE DATABASE LINK lien_cergy
+    CONNECT TO glpi_cergy IDENTIFIED BY "&&GLPI_CERGY_PASSWORD"
+    USING '&&LOCAL_CONNECT_ALIAS';
+
+CREATE OR REPLACE SYNONYM assets_cergy FOR assets@lien_cergy;
+CREATE OR REPLACE SYNONYM users_cergy FOR users@lien_cergy;
+CREATE OR REPLACE SYNONYM sites_cergy FOR sites@lien_cergy;
+CREATE OR REPLACE SYNONYM tickets_cergy FOR tickets@lien_cergy;
+CREATE OR REPLACE SYNONYM network_ports_cergy FOR network_ports@lien_cergy;
+CREATE OR REPLACE SYNONYM ip_networks_cergy FOR ip_networks@lien_cergy;
+CREATE OR REPLACE SYNONYM ip_addresses_cergy FOR ip_addresses@lien_cergy;
+
+CREATE OR REPLACE VIEW V_ASSETS_GLOBAL AS
+SELECT a.id, a.asset_type, a.name, a.serial_number, a.site_id,
+       s.name AS entite, s.site_code AS site, 'GLPI_PAU' AS source_schema
+FROM assets a
+    JOIN sites s ON a.site_id = s.id
+UNION ALL
+SELECT a.id, a.asset_type, a.name, a.serial_number, a.site_id,
+       s.name AS entite, s.site_code AS site, 'GLPI_CERGY@LIEN_CERGY' AS source_schema
+FROM assets@lien_cergy a
+    JOIN sites@lien_cergy s ON a.site_id = s.id;
+
+CREATE OR REPLACE VIEW V_USERS_GLOBAL AS
+SELECT u.id, u.login, u.last_name, u.first_name, u.email,
+       s.name AS entite, s.site_code AS site, 'GLPI_PAU' AS source_schema
+FROM users u
+    JOIN sites s ON u.site_id = s.id
+UNION ALL
+SELECT u.id, u.login, u.last_name, u.first_name, u.email,
+       s.name AS entite, s.site_code AS site, 'GLPI_CERGY@LIEN_CERGY' AS source_schema
+FROM users@lien_cergy u
+    JOIN sites@lien_cergy s ON u.site_id = s.id;
+
+CREATE OR REPLACE VIEW V_STATS_GLOBAL AS
+SELECT 'PAU' AS site, COUNT(*) AS total_materiel
+FROM assets
+UNION ALL
+SELECT 'CERGY' AS site, COUNT(*) AS total_materiel
+FROM assets@lien_cergy;
+
+CREATE OR REPLACE VIEW V_TICKETS_GLOBAL AS
+SELECT t.id, t.title, t.status, t.priority, a.name AS materiel,
+       s.name AS entite, 'GLPI_PAU' AS source_schema
+FROM tickets t
+    JOIN assets a ON t.asset_id = a.id
+    JOIN sites s ON t.site_id = s.id
+UNION ALL
+SELECT t.id, t.title, t.status, t.priority, a.name AS materiel,
+       s.name AS entite, 'GLPI_CERGY@LIEN_CERGY' AS source_schema
+FROM tickets@lien_cergy t
+    JOIN assets@lien_cergy a ON t.asset_id = a.id
+    JOIN sites@lien_cergy s ON t.site_id = s.id;
+
+-- Verification rapide cote Pau.
+SELECT 'GLPI_PAU.assets' AS objet, COUNT(*) AS nb_lignes FROM assets
+UNION ALL
+SELECT 'GLPI_CERGY.assets via lien_cergy', COUNT(*) FROM assets@lien_cergy
+UNION ALL
+SELECT 'V_ASSETS_GLOBAL', COUNT(*) FROM V_ASSETS_GLOBAL;

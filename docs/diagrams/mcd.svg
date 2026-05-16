@@ -1,0 +1,221 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1620" height="1120" viewBox="0 0 1620 1120" role="img" aria-label="MCD simplifie GLPI Multi-Sites">
+<defs>
+<marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+<path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+</marker>
+<filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+<feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#0f172a" flood-opacity="0.16"/>
+</filter>
+</defs>
+<title>MCD simplifie GLPI Multi-Sites</title>
+<rect x="0" y="0" width="1620" height="1120" fill="#f8fafc"/>
+<text x="810" y="42" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="28" font-weight="800" fill="#0f172a" text-anchor="middle">MCD simplifie - BDD GLPI Multi-Sites</text>
+<text x="810" y="72" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="500" fill="#475569" text-anchor="middle">Table centrale assets, relations FK classiques et cardinalites lisibles</text>
+<rect class="" x="70" y="130" width="190" height="130" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="70" y="130" width="190" height="36" rx="10" fill="#2563eb" stroke="#2563eb"/>
+<rect x="70" y="155" width="190" height="12" fill="#2563eb"/>
+<text x="82" y="154" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">SITES</text>
+<text x="82" y="188" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="82" y="210" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">name</text>
+<text x="82" y="232" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">site_code</text>
+<text x="82" y="254" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK parent</text>
+<rect class="" x="330" y="130" width="190" height="130" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="330" y="130" width="190" height="36" rx="10" fill="#2563eb" stroke="#2563eb"/>
+<rect x="330" y="155" width="190" height="12" fill="#2563eb"/>
+<text x="342" y="154" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">LOCATIONS</text>
+<text x="342" y="188" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="342" y="210" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK site_id</text>
+<text x="342" y="232" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">name</text>
+<text x="342" y="254" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">building / room</text>
+<rect class="" x="590" y="130" width="200" height="130" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="590" y="130" width="200" height="36" rx="10" fill="#0f766e" stroke="#0f766e"/>
+<rect x="590" y="155" width="200" height="12" fill="#0f766e"/>
+<text x="602" y="154" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">USERS</text>
+<text x="602" y="188" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="602" y="210" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">login</text>
+<text x="602" y="232" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK site_id</text>
+<text x="602" y="254" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK location_id</text>
+<rect class="" x="850" y="130" width="185" height="108" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="850" y="130" width="185" height="36" rx="10" fill="#0f766e" stroke="#0f766e"/>
+<rect x="850" y="155" width="185" height="12" fill="#0f766e"/>
+<text x="862" y="154" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">PROFILES</text>
+<text x="862" y="188" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="862" y="210" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">name</text>
+<text x="862" y="232" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">interface</text>
+<rect class="" x="1100" y="130" width="190" height="130" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="1100" y="130" width="190" height="36" rx="10" fill="#0f766e" stroke="#0f766e"/>
+<rect x="1100" y="155" width="190" height="12" fill="#0f766e"/>
+<text x="1112" y="154" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">GROUPS</text>
+<text x="1112" y="188" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="1112" y="210" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK site_id</text>
+<text x="1112" y="232" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">name</text>
+<text x="1112" y="254" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK parent</text>
+<rect class="" x="850" y="330" width="210" height="130" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="850" y="330" width="210" height="36" rx="10" fill="#0f766e" stroke="#0f766e"/>
+<rect x="850" y="355" width="210" height="12" fill="#0f766e"/>
+<text x="862" y="354" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">PROFILES_USERS</text>
+<text x="862" y="388" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="862" y="410" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK user_id</text>
+<text x="862" y="432" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK profile_id</text>
+<text x="862" y="454" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK site_id</text>
+<rect class="" x="1100" y="330" width="205" height="130" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="1100" y="330" width="205" height="36" rx="10" fill="#0f766e" stroke="#0f766e"/>
+<rect x="1100" y="355" width="205" height="12" fill="#0f766e"/>
+<text x="1112" y="354" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">GROUPS_USERS</text>
+<text x="1112" y="388" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="1112" y="410" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK user_id</text>
+<text x="1112" y="432" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK group_id</text>
+<text x="1112" y="454" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">is_manager</text>
+<rect class="" x="70" y="390" width="190" height="86" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="70" y="390" width="190" height="36" rx="10" fill="#7c3aed" stroke="#7c3aed"/>
+<rect x="70" y="415" width="190" height="12" fill="#7c3aed"/>
+<text x="82" y="414" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">MANUFACTURERS</text>
+<text x="82" y="448" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="82" y="470" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">name</text>
+<rect class="" x="70" y="550" width="190" height="86" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="70" y="550" width="190" height="36" rx="10" fill="#7c3aed" stroke="#7c3aed"/>
+<rect x="70" y="575" width="190" height="12" fill="#7c3aed"/>
+<text x="82" y="574" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">STATES</text>
+<text x="82" y="608" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="82" y="630" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">name</text>
+<rect class="" x="380" y="470" width="260" height="174" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="380" y="470" width="260" height="36" rx="10" fill="#dc2626" stroke="#dc2626"/>
+<rect x="380" y="495" width="260" height="12" fill="#dc2626"/>
+<text x="392" y="494" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">ASSETS</text>
+<text x="392" y="528" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="392" y="550" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">asset_type</text>
+<text x="392" y="572" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">name / serial_number</text>
+<text x="392" y="594" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK site/location</text>
+<text x="392" y="616" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK owner/tech</text>
+<text x="392" y="638" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK refs</text>
+<rect class="" x="790" y="580" width="210" height="108" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="790" y="580" width="210" height="36" rx="10" fill="#ea580c" stroke="#ea580c"/>
+<rect x="790" y="605" width="210" height="12" fill="#ea580c"/>
+<text x="802" y="604" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">TICKET_CATEGORIES</text>
+<text x="802" y="638" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="802" y="660" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">name</text>
+<text x="802" y="682" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">description</text>
+<rect class="" x="790" y="750" width="230" height="130" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="790" y="750" width="230" height="36" rx="10" fill="#ea580c" stroke="#ea580c"/>
+<rect x="790" y="775" width="230" height="12" fill="#ea580c"/>
+<text x="802" y="774" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">TICKETS</text>
+<text x="802" y="808" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="802" y="830" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK asset_id</text>
+<text x="802" y="852" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK requester</text>
+<text x="802" y="874" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">status / priority</text>
+<rect class="" x="1080" y="690" width="220" height="130" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="1080" y="690" width="220" height="36" rx="10" fill="#ea580c" stroke="#ea580c"/>
+<rect x="1080" y="715" width="220" height="12" fill="#ea580c"/>
+<text x="1092" y="714" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">TICKET_USERS</text>
+<text x="1092" y="748" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="1092" y="770" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK ticket_id</text>
+<text x="1092" y="792" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK user_id</text>
+<text x="1092" y="814" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">assigned_at</text>
+<rect class="" x="1080" y="870" width="220" height="130" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="1080" y="870" width="220" height="36" rx="10" fill="#ea580c" stroke="#ea580c"/>
+<rect x="1080" y="895" width="220" height="12" fill="#ea580c"/>
+<text x="1092" y="894" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">TICKET_FOLLOWUPS</text>
+<text x="1092" y="928" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="1092" y="950" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK ticket_id</text>
+<text x="1092" y="972" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK user_id</text>
+<text x="1092" y="994" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">content</text>
+<rect class="" x="420" y="760" width="235" height="130" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="420" y="760" width="235" height="36" rx="10" fill="#0891b2" stroke="#0891b2"/>
+<rect x="420" y="785" width="235" height="12" fill="#0891b2"/>
+<text x="432" y="784" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">NETWORK_PORTS</text>
+<text x="432" y="818" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="432" y="840" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK asset_id</text>
+<text x="432" y="862" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">mac_address</text>
+<text x="432" y="884" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">port_type</text>
+<rect class="" x="760" y="960" width="220" height="152" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="760" y="960" width="220" height="36" rx="10" fill="#0891b2" stroke="#0891b2"/>
+<rect x="760" y="985" width="220" height="12" fill="#0891b2"/>
+<text x="772" y="984" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">IP_NETWORKS</text>
+<text x="772" y="1018" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="772" y="1040" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK site_id</text>
+<text x="772" y="1062" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">network_address</text>
+<text x="772" y="1084" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">gateway_address</text>
+<text x="772" y="1106" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">vlan_tag</text>
+<rect class="" x="1260" y="960" width="220" height="130" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="1260" y="960" width="220" height="36" rx="10" fill="#0891b2" stroke="#0891b2"/>
+<rect x="1260" y="985" width="220" height="12" fill="#0891b2"/>
+<text x="1272" y="984" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="start">IP_ADDRESSES</text>
+<text x="1272" y="1018" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">PK id</text>
+<text x="1272" y="1040" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK port</text>
+<text x="1272" y="1062" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">FK network</text>
+<text x="1272" y="1084" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="500" fill="#334155" text-anchor="start">ip_address</text>
+<line x1="260" y1="195.0" x2="330" y2="195.0" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="249.0" y="181.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="295.0" y="199.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="260" y1="195.0" x2="590" y2="195.0" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="379.0" y="181.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="425.0" y="199.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="260" y1="195.0" x2="1100" y2="195.0" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="634.0" y="181.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="680.0" y="199.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="790" y1="195.0" x2="850" y2="395.0" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="774.0" y="281.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="820.0" y="299.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="942.5" y1="238" x2="955.0" y2="330" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="902.75" y="270.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="948.75" y="288.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="790" y1="195.0" x2="1100" y2="395.0" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="899.0" y="281.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="945.0" y="299.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="1195.0" y1="260" x2="1202.5" y2="330" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="1152.75" y="281.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="1198.75" y="299.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="425.0" y1="260" x2="510.0" y2="470" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="421.5" y="351.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="467.5" y="369.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="690.0" y1="260" x2="510.0" y2="470" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="554.0" y="351.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="600.0" y="369.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="260" y1="433.0" x2="380" y2="557.0" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="274.0" y="481.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="320.0" y="499.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="260" y1="593.0" x2="380" y2="557.0" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="274.0" y="561.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="320.0" y="579.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="640" y1="557.0" x2="790" y2="815.0" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="669.0" y="672.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="715.0" y="690.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="895.0" y1="688" x2="905.0" y2="750" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="854.0" y="705.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="900.0" y="723.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="1020" y1="815.0" x2="1080" y2="755.0" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="1004.0" y="771.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="1050.0" y="789.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="1020" y1="815.0" x2="1080" y2="935.0" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="1004.0" y="861.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="1050.0" y="879.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="690.0" y1="260" x2="905.0" y2="750" stroke="#475569" stroke-width="1.7" stroke-dasharray="5 5" marker-end="url(#arrow)"/>
+<rect class="" x="751.5" y="491.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="797.5" y="509.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="1195.0" y1="260" x2="905.0" y2="750" stroke="#475569" stroke-width="1.7" stroke-dasharray="5 5" marker-end="url(#arrow)"/>
+<rect class="" x="1004.0" y="491.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="1050.0" y="509.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="510.0" y1="644" x2="537.5" y2="760" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="477.75" y="688.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="523.75" y="706.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="655" y1="825.0" x2="1260" y2="1025.0" stroke="#475569" stroke-width="1.7" stroke-dasharray="5 5" marker-end="url(#arrow)"/>
+<rect class="" x="911.5" y="911.0" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="957.5" y="929.0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<line x1="980" y1="1036.0" x2="1260" y2="1025.0" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect class="" x="1074.0" y="1016.5" width="92" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="1120.0" y="1034.5" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">1,N</text>
+<rect class="" x="1320" y="130" width="230" height="172" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<text x="1435" y="162" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="800" fill="#0f172a" text-anchor="middle">Legende</text>
+<rect x="1340" y="184" width="106" height="26" rx="13" fill="#dbeafe" stroke="#93c5fd"/>
+<text x="1393.0" y="202" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#1d4ed8" text-anchor="middle">Organisation</text>
+<rect x="1340" y="220" width="106" height="26" rx="13" fill="#ccfbf1" stroke="#5eead4"/>
+<text x="1393.0" y="238" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f766e" text-anchor="middle">Utilisateurs</text>
+<rect x="1340" y="256" width="92" height="26" rx="13" fill="#fee2e2" stroke="#fca5a5"/>
+<text x="1386.0" y="274" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#b91c1c" text-anchor="middle">Inventaire</text>
+<rect x="1450" y="184" width="78" height="26" rx="13" fill="#ffedd5" stroke="#fdba74"/>
+<text x="1489.0" y="202" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#c2410c" text-anchor="middle">Support</text>
+<rect x="1450" y="220" width="78" height="26" rx="13" fill="#cffafe" stroke="#67e8f9"/>
+<text x="1489.0" y="238" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0e7490" text-anchor="middle">Reseau</text>
+<rect x="1450" y="256" width="78" height="26" rx="13" fill="#ede9fe" stroke="#c4b5fd"/>
+<text x="1489.0" y="274" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#6d28d9" text-anchor="middle">Refs</text>
+</svg>

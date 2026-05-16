@@ -1,27 +1,14 @@
 -- ============================================================
 -- triggers.sql
--- Triggers PL/SQL — Automatisation et intégrité
+-- Triggers PL/SQL - Schema simplifie
 -- Oracle XE
 -- ============================================================
 
--- =========================
--- TRG_AUTO_DATE_MOD
--- Met à jour automatiquement date_mod sur les tables matériels
--- =========================
-
-CREATE OR REPLACE TRIGGER TRG_AUTO_DATE_MOD_COMPUTERS
-BEFORE UPDATE ON computers
+CREATE OR REPLACE TRIGGER TRG_AUTO_DATE_MOD_ASSETS
+BEFORE UPDATE ON assets
 FOR EACH ROW
 BEGIN
-    :NEW.date_mod := SYSTIMESTAMP;
-END;
-/
-
-CREATE OR REPLACE TRIGGER TRG_AUTO_DATE_MOD_MONITORS
-BEFORE UPDATE ON monitors
-FOR EACH ROW
-BEGIN
-    :NEW.date_mod := SYSTIMESTAMP;
+    :NEW.updated_at := SYSTIMESTAMP;
 END;
 /
 
@@ -29,7 +16,7 @@ CREATE OR REPLACE TRIGGER TRG_AUTO_DATE_MOD_USERS
 BEFORE UPDATE ON users
 FOR EACH ROW
 BEGIN
-    :NEW.date_mod := SYSTIMESTAMP;
+    :NEW.updated_at := SYSTIMESTAMP;
 END;
 /
 
@@ -37,7 +24,7 @@ CREATE OR REPLACE TRIGGER TRG_AUTO_DATE_MOD_NETPORTS
 BEFORE UPDATE ON network_ports
 FOR EACH ROW
 BEGIN
-    :NEW.date_mod := SYSTIMESTAMP;
+    :NEW.updated_at := SYSTIMESTAMP;
 END;
 /
 
@@ -45,24 +32,24 @@ CREATE OR REPLACE TRIGGER TRG_AUTO_DATE_MOD_TICKETS
 BEFORE UPDATE ON tickets
 FOR EACH ROW
 BEGIN
-    :NEW.date_mod := SYSTIMESTAMP;
+    :NEW.updated_at := SYSTIMESTAMP;
 
     IF :OLD.status = 'NOUVEAU'
        AND :NEW.status IN ('ASSIGNE', 'EN_COURS')
-       AND :NEW.date_assigned IS NULL THEN
-        :NEW.date_assigned := SYSTIMESTAMP;
+       AND :NEW.assigned_at IS NULL THEN
+        :NEW.assigned_at := SYSTIMESTAMP;
     END IF;
 
     IF :OLD.status != 'RESOLU'
        AND :NEW.status = 'RESOLU'
-       AND :NEW.date_resolved IS NULL THEN
-        :NEW.date_resolved := SYSTIMESTAMP;
+       AND :NEW.resolved_at IS NULL THEN
+        :NEW.resolved_at := SYSTIMESTAMP;
     END IF;
 
     IF :OLD.status != 'CLOS'
        AND :NEW.status = 'CLOS'
-       AND :NEW.date_closed IS NULL THEN
-        :NEW.date_closed := SYSTIMESTAMP;
+       AND :NEW.closed_at IS NULL THEN
+        :NEW.closed_at := SYSTIMESTAMP;
     END IF;
 END;
 /
@@ -76,11 +63,11 @@ BEGIN
     SELECT COUNT(*)
     INTO v_count
     FROM profiles_users pu
-        JOIN profiles p ON pu.profiles_id = p.id
-        JOIN tickets t ON t.id = :NEW.tickets_id
-    WHERE pu.users_id = :NEW.users_id
+        JOIN profiles p ON pu.profile_id = p.id
+        JOIN tickets t ON t.id = :NEW.ticket_id
+    WHERE pu.user_id = :NEW.user_id
       AND p.name = 'Technicien'
-      AND (pu.entities_id = t.entities_id OR pu.is_recursive = 1);
+      AND (pu.site_id = t.site_id OR pu.is_recursive = 1);
 
     IF v_count = 0 THEN
         RAISE_APPLICATION_ERROR(-20060,
@@ -89,13 +76,8 @@ BEGIN
 END;
 /
 
--- =========================
--- TRG_AUDIT_COMPUTERS
--- Log automatique de toutes les modifications sur computers
--- =========================
-
-CREATE OR REPLACE TRIGGER TRG_AUDIT_COMPUTERS
-AFTER INSERT OR UPDATE OR DELETE ON computers
+CREATE OR REPLACE TRIGGER TRG_AUDIT_ASSETS
+AFTER INSERT OR UPDATE OR DELETE ON assets
 FOR EACH ROW
 DECLARE
     v_action VARCHAR2(10);
@@ -106,120 +88,53 @@ BEGIN
     IF INSERTING THEN
         v_action := 'INSERT';
         v_id := :NEW.id;
-        v_new := 'name=' || :NEW.name || ', serial=' || :NEW.serial ||
-                 ', entities_id=' || :NEW.entities_id;
+        v_new := 'asset_type=' || :NEW.asset_type || ', name=' || :NEW.name ||
+                 ', serial_number=' || :NEW.serial_number || ', site_id=' || :NEW.site_id;
     ELSIF UPDATING THEN
         v_action := 'UPDATE';
         v_id := :NEW.id;
-        v_old := 'name=' || :OLD.name || ', serial=' || :OLD.serial ||
-                 ', entities_id=' || :OLD.entities_id ||
-                 ', users_id=' || :OLD.users_id ||
-                 ', states_id=' || :OLD.states_id;
-        v_new := 'name=' || :NEW.name || ', serial=' || :NEW.serial ||
-                 ', entities_id=' || :NEW.entities_id ||
-                 ', users_id=' || :NEW.users_id ||
-                 ', states_id=' || :NEW.states_id;
+        v_old := 'asset_type=' || :OLD.asset_type || ', name=' || :OLD.name ||
+                 ', serial_number=' || :OLD.serial_number || ', state_id=' || :OLD.state_id;
+        v_new := 'asset_type=' || :NEW.asset_type || ', name=' || :NEW.name ||
+                 ', serial_number=' || :NEW.serial_number || ', state_id=' || :NEW.state_id;
     ELSIF DELETING THEN
         v_action := 'DELETE';
         v_id := :OLD.id;
-        v_old := 'name=' || :OLD.name || ', serial=' || :OLD.serial ||
-                 ', entities_id=' || :OLD.entities_id;
+        v_old := 'asset_type=' || :OLD.asset_type || ', name=' || :OLD.name ||
+                 ', serial_number=' || :OLD.serial_number || ', site_id=' || :OLD.site_id;
     END IF;
 
-    INSERT INTO audit_log (table_name, record_id, action, old_values, new_values)
-    VALUES ('COMPUTERS', v_id, v_action, v_old, v_new);
+    INSERT INTO audit_log (table_name, row_id, action, old_data, new_data)
+    VALUES ('ASSETS', v_id, v_action, v_old, v_new);
 END;
 /
 
--- =========================
--- TRG_CHECK_ASSET_TYPE_CATEGORY
--- Vérifie que le type assigné correspond à la catégorie du matériel
--- =========================
-
-CREATE OR REPLACE TRIGGER TRG_CHECK_COMPUTER_TYPE
-BEFORE INSERT OR UPDATE ON computers
-FOR EACH ROW
-DECLARE
-    v_category VARCHAR2(50);
-BEGIN
-    IF :NEW.asset_types_id IS NOT NULL THEN
-        SELECT category INTO v_category
-        FROM asset_types
-        WHERE id = :NEW.asset_types_id;
-
-        IF v_category != 'COMPUTER' THEN
-            RAISE_APPLICATION_ERROR(-20001,
-                'Le type (id=' || :NEW.asset_types_id ||
-                ') doit être de catégorie COMPUTER, trouvé: ' || v_category);
-        END IF;
-    END IF;
-
-    IF :NEW.asset_models_id IS NOT NULL THEN
-        SELECT category INTO v_category
-        FROM asset_models
-        WHERE id = :NEW.asset_models_id;
-
-        IF v_category != 'COMPUTER' THEN
-            RAISE_APPLICATION_ERROR(-20002,
-                'Le modèle (id=' || :NEW.asset_models_id ||
-                ') doit être de catégorie COMPUTER, trouvé: ' || v_category);
-        END IF;
-    END IF;
-END;
-/
-
-CREATE OR REPLACE TRIGGER TRG_CHECK_MONITOR_TYPE
-BEFORE INSERT OR UPDATE ON monitors
-FOR EACH ROW
-DECLARE
-    v_category VARCHAR2(50);
-BEGIN
-    IF :NEW.asset_types_id IS NOT NULL THEN
-        SELECT category INTO v_category
-        FROM asset_types WHERE id = :NEW.asset_types_id;
-        IF v_category != 'MONITOR' THEN
-            RAISE_APPLICATION_ERROR(-20001,
-                'Le type doit être de catégorie MONITOR, trouvé: ' || v_category);
-        END IF;
-    END IF;
-END;
-/
-
--- =========================
--- TRG_ARCHIVE_ON_DELETE
--- Archive automatiquement un matériel supprimé au lieu de le perdre
--- =========================
-
-CREATE OR REPLACE TRIGGER TRG_ARCHIVE_COMPUTER_DELETE
-BEFORE DELETE ON computers
+CREATE OR REPLACE TRIGGER TRG_ARCHIVE_ASSET_DELETE
+BEFORE DELETE ON assets
 FOR EACH ROW
 BEGIN
-    INSERT INTO archives_materiel (source_table, source_id, data)
+    INSERT INTO archives_materiel (original_table, original_id, archived_data)
     VALUES (
-        'COMPUTERS',
+        'ASSETS',
         :OLD.id,
-        '{"name":"' || :OLD.name ||
-        '","serial":"' || :OLD.serial ||
-        '","entities_id":' || :OLD.entities_id ||
-        ',"users_id":' || NVL(TO_CHAR(:OLD.users_id), 'null') ||
-        ',"states_id":' || NVL(TO_CHAR(:OLD.states_id), 'null') ||
-        ',"date_creation":"' || TO_CHAR(:OLD.date_creation, 'YYYY-MM-DD HH24:MI:SS') ||
+        '{"asset_type":"' || :OLD.asset_type ||
+        '","name":"' || :OLD.name ||
+        '","serial_number":"' || :OLD.serial_number ||
+        '","site_id":' || :OLD.site_id ||
+        ',"owner_user_id":' || NVL(TO_CHAR(:OLD.owner_user_id), 'null') ||
+        ',"state_id":' || NVL(TO_CHAR(:OLD.state_id), 'null') ||
+        ',"created_at":"' || TO_CHAR(:OLD.created_at, 'YYYY-MM-DD HH24:MI:SS') ||
         '"}'
     );
 END;
 /
 
--- =========================
--- TRG_CASCADE_ENTITY_UPDATE
--- Propage le site_code quand une entité parent change
--- =========================
-
 CREATE OR REPLACE TRIGGER TRG_CASCADE_SITE_CODE
-AFTER UPDATE OF site_code ON entities
+AFTER UPDATE OF site_code ON sites
 FOR EACH ROW
 BEGIN
-    UPDATE entities
+    UPDATE sites
     SET site_code = :NEW.site_code
-    WHERE entities_id = :NEW.id;
+    WHERE parent_site_id = :NEW.id;
 END;
 /

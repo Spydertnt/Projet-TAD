@@ -1,113 +1,390 @@
-# Mini-Projet GLPI — Nouvelle BDD Multi-Sites
+# Mini-Projet GLPI - Nouvelle BDD Multi-Sites
 
-> **CY Tech — TAD 2025-2026**  
-> Refonte de la base de données GLPI pour une architecture Oracle XE distribuée multi-sites (Cergy / Pau)
+> CY Tech - TAD 2025-2026  
+> Refonte simplifiee d'une base GLPI vers Oracle XE distribue entre Cergy et Pau.
 
----
+## Objectif
 
-## 📋 Description
+Le projet simplifie le schema GLPI original pour obtenir une base Oracle plus lisible, contrainte et defendable. Le modele garde uniquement le noyau utile : organisation multi-sites, utilisateurs, inventaire, tickets support, reseau minimal, audit et archivage.
 
-Ce projet réalise le **reverse engineering** de la base de données du logiciel GLPI (Gestionnaire Libre de Parc Informatique), puis conçoit et implémente une **nouvelle architecture Oracle** répondant aux enjeux d'un déploiement multi-sites entre **Cergy** et **Pau**.
+La table centrale est `assets`. Elle remplace les tables separees de GLPI comme `computers`, `monitors`, `printers`, `phones`, `peripherals` et `network_equipments`.
 
-### Objectifs
-- Analyser la structure existante de GLPI (MySQL, +250 tables, pas de FK)
-- Concevoir une nouvelle BDD Oracle avec intégrité référentielle garantie
-- Implémenter les concepts avancés : PL/SQL, tablespaces, BDDR, indexation
-- Valider les performances par des benchmarks comparatifs
+## Architecture
 
----
+```text
+Oracle XE local
+|-- schema GLPI_CERGY : vues du fragment Cergy
+`-- schema GLPI_PAU   : vues du fragment Pau
 
-## 🏗️ Architecture
+Donnees fragmentees par site :
+- assets
+- users
+- tickets
+- network_ports
+- ip_networks
+- ip_addresses
 
+Referentiels repliques :
+- manufacturers
+- states
+- ticket_categories
 ```
-┌─────────────────────────────────────────────────┐
-│   ORACLE XE — CERGY    ◄──DB Link──►   ORACLE XE — PAU   │
-│                                                           │
-│   TS_MATERIEL           Fragmentation    TS_MATERIEL      │
-│   TS_UTILISATEURS       horizontale      TS_UTILISATEURS  │
-│   TS_RESEAU             + réplication    TS_RESEAU        │
-│   TS_SUPPORT            référentiels     TS_SUPPORT       │
-│   TS_INDEX                                TS_INDEX         │
-└─────────────────────────────────────────────────┘
-```
 
-- **37 tables** (vs ~30 GLPI dans le périmètre) avec FK explicites
-- **6 tablespaces** dédiés (matériel, utilisateurs, réseau, support, index, temporaire)
-- **7 vues métier** pour l'accès simplifié aux données
-- **54 index** (B-tree, composites, fonctionnels, bitmap)
-- **PL/SQL complet** : triggers, procédures, fonctions, curseurs
-- **BDDR** : DB Links, synonymes, vues distribuées, réplication
+Le champ `sites.site_code` indique le site proprietaire des donnees : `CERGY` ou `PAU`.
+La BDDR est simulee sur un seul PC avec deux utilisateurs Oracle locaux.
 
----
+## Structure
 
-## 📁 Structure du projet
-
-```
+```text
 Projet-TAD/
-├── README.md
-├── docs/
-│   ├── reverse_engineering_glpi.md   # Phase 1 — Analyse de l'existant
-│   ├── rapport.md                    # Rapport détaillé du projet
-│   ├── presentation.md               # Support pour la soutenance orale
-│   └── performance_report.html       # Rapport interactif de benchmarks
-└── sql/
-    ├── 00_architecture.md            # Documentation technique
-    ├── 01_tablespaces.sql            # Création des tablespaces
-    ├── 02_schema_tables.sql          # 37 tables avec FK explicites
-    ├── 03_users_roles.sql            # Utilisateurs, rôles, privilèges Oracle
-    ├── 04_clusters_indexes.sql       # 54 index (B-tree, composite, bitmap)
-    ├── 05_views.sql                  # 7 vues métier
-    ├── 06_plsql/
-    │   ├── triggers.sql              # 9 triggers (audit, validation, cascade)
-    │   ├── procedures.sql            # 6 procédures stockées
-    │   ├── functions.sql             # 4 fonctions
-    │   └── cursors.sql               # 4 curseurs (explicite, FOR, REF)
-    ├── 07_bddr.sql                   # DB Links, synonymes, vues distribuées
-    ├── 08_query_plans.sql            # Analyse des plans d'exécution
-    ├── 09_test_data.sql              # Génération de ~20 000 lignes de test
-    └── 10_benchmark.sql              # Suite de benchmarks comparatifs
+|-- README.md
+|-- docs/
+|   |-- rapport.md
+|   |-- presentation.md
+|   |-- reverse_engineering_glpi.md
+|   `-- diagrams/
+|       |-- architecture.svg
+|       |-- mcd.svg
+|       `-- uml.svg
+|-- scripts/
+|   |-- generate_diagrams.py
+|   `-- generate_uml_diagram.py
+`-- sql/
+    |-- 00_architecture.md
+    |-- 00_run_all.sql
+    |-- 01_tablespaces.sql
+    |-- 02_schema_tables.sql
+    |-- 03_users_roles.sql
+    |-- 04_clusters_indexes.sql
+    |-- 05_views.sql
+    |-- 06_plsql/
+    |-- 07_bddr.sql
+    |-- 08_query_plans.sql
+    |-- 09_test_data.sql
+    `-- 10_benchmark.sql
 ```
 
----
+## Execution
 
-## 🚀 Installation et exécution
+Execution simple :
 
-### Prérequis
-- Oracle XE 21c
-- SQL*Plus ou SQLcl
+```sql
+CONNECT system/mot_de_passe@localhost:1521/XE
+START H:\Desktop\S4\Administration_et_traitement_des_donnees\Projet-TAD\sql\00_run_all.sql
+```
 
-### Exécution (dans l'ordre)
+Execution fichier par fichier :
+
 ```sql
 @01_tablespaces.sql
 @02_schema_tables.sql
-@03_users_roles.sql
 @04_clusters_indexes.sql
+@03_users_roles.sql
 @05_views.sql
 @06_plsql/triggers.sql
 @06_plsql/procedures.sql
 @06_plsql/functions.sql
 @06_plsql/cursors.sql
-@07_bddr.sql
-@08_query_plans.sql
 @09_test_data.sql
+@08_query_plans.sql
 @10_benchmark.sql
+@07_bddr.sql
 ```
 
----
+## Diagrammes
 
-## 📊 Résultats de performance
+```bash
+python scripts/generate_diagrams.py
+python scripts/generate_uml_diagram.py
+```
 
-| Métrique | Valeur |
+`generate_diagrams.py` genere `architecture.svg` et `mcd.svg`. `generate_uml_diagram.py` genere uniquement `uml.svg`.
+
+## Tables
+
+Le modele contient **19 tables** : 17 fonctionnelles et 2 systeme.
+
+| Domaine | Tables |
 |---|---|
-| Lignes générées | ~21 100 |
-| Gain moyen | **62%** |
-| Gain maximum | **94%** (recherches indexées) |
-| Requêtes testées | 8 |
+| Organisation | `sites`, `locations` |
+| Referentiels | `manufacturers`, `states`, `ticket_categories` |
+| Utilisateurs | `users`, `profiles`, `profiles_users`, `groups`, `groups_users` |
+| Inventaire | `assets` |
+| Support | `tickets`, `ticket_users`, `ticket_followups` |
+| Reseau | `network_ports`, `ip_networks`, `ip_addresses` |
+| Systeme | `audit_log`, `archives_materiel` |
 
-> Voir le rapport interactif : [`docs/performance_report.html`](docs/performance_report.html)
+## Dictionnaire Des Donnees
 
----
+### `sites`
 
-## 📄 Licence
+Sites et structures logiques : Cergy, Pau, services ou sous-services.
 
-Projet académique — CY Tech 2025-2026
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `name` | Nom du site ou de la structure |
+| `parent_site_id` | Site ou structure parente |
+| `full_name` | Nom complet avec chemin hierarchique |
+| `site_code` | Site physique : `CERGY` ou `PAU` |
+| `created_at` | Date de creation |
+| `updated_at` | Date de derniere modification |
+
+### `locations`
+
+Emplacements physiques des utilisateurs et materiels.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `site_id` | Site de rattachement |
+| `name` | Nom de la localisation |
+| `parent_location_id` | Localisation parente |
+| `full_name` | Chemin complet de la localisation |
+| `building` | Batiment |
+| `room` | Salle ou bureau |
+| `created_at` | Date de creation |
+| `updated_at` | Date de derniere modification |
+
+### `manufacturers`
+
+Referentiel des fabricants.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `name` | Nom du fabricant |
+
+### `states`
+
+Referentiel des etats d'un materiel.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `name` | Etat : en service, stock, maintenance, hors service |
+
+### `users`
+
+Utilisateurs, demandeurs et techniciens.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `login` | Identifiant de connexion |
+| `last_name` | Nom |
+| `first_name` | Prenom |
+| `email` | Adresse email |
+| `phone` | Telephone |
+| `site_id` | Site principal |
+| `location_id` | Localisation principale |
+| `supervisor_user_id` | Responsable hierarchique |
+| `is_active` | Compte actif ou non |
+| `created_at` | Date de creation |
+| `updated_at` | Date de derniere modification |
+
+### `profiles`
+
+Profils applicatifs simplifiant les droits.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `name` | Nom du profil |
+| `interface` | Interface associee : `central` ou `helpdesk` |
+| `is_default` | Profil par defaut ou non |
+
+### `profiles_users`
+
+Affectation d'un profil a un utilisateur sur un site.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `user_id` | Utilisateur |
+| `profile_id` | Profil |
+| `site_id` | Site d'application |
+| `is_recursive` | Application aux sous-sites |
+
+### `groups`
+
+Groupes d'utilisateurs, principalement equipes support.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `site_id` | Site du groupe |
+| `name` | Nom du groupe |
+| `parent_group_id` | Groupe parent |
+| `full_name` | Nom complet |
+| `created_at` | Date de creation |
+| `updated_at` | Date de derniere modification |
+
+### `groups_users`
+
+Membres des groupes.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `user_id` | Utilisateur membre |
+| `group_id` | Groupe |
+| `is_manager` | Indique si l'utilisateur gere le groupe |
+
+### `assets`
+
+Table centrale de l'inventaire.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `site_id` | Site du materiel |
+| `asset_type` | Type : ordinateur, imprimante, telephone, etc. |
+| `name` | Nom du materiel |
+| `serial_number` | Numero de serie |
+| `owner_user_id` | Utilisateur principal |
+| `technician_user_id` | Technicien responsable |
+| `location_id` | Localisation physique |
+| `manufacturer_id` | Fabricant |
+| `state_id` | Etat du materiel |
+| `created_at` | Date de creation |
+| `updated_at` | Date de derniere modification |
+
+### `ticket_categories`
+
+Categories de tickets.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `name` | Nom de la categorie |
+| `description` | Description |
+
+### `tickets`
+
+Demandes et incidents associes a un materiel.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `site_id` | Site concerne |
+| `asset_id` | Materiel concerne |
+| `title` | Titre du ticket |
+| `description` | Description detaillee |
+| `status` | Etat du ticket |
+| `priority` | Priorite |
+| `requester_user_id` | Demandeur |
+| `assigned_group_id` | Groupe support affecte |
+| `category_id` | Categorie du ticket |
+| `resolution` | Texte de resolution |
+| `created_at` | Date d'ouverture |
+| `updated_at` | Date de derniere modification |
+| `assigned_at` | Date d'affectation |
+| `resolved_at` | Date de resolution |
+| `closed_at` | Date de cloture |
+
+### `ticket_users`
+
+Techniciens affectes aux tickets.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `ticket_id` | Ticket concerne |
+| `user_id` | Technicien affecte |
+| `assigned_by_user_id` | Utilisateur ayant affecte le technicien |
+| `assigned_at` | Date d'affectation |
+
+### `ticket_followups`
+
+Commentaires et suivis de tickets.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `ticket_id` | Ticket concerne |
+| `user_id` | Auteur |
+| `content` | Contenu du suivi |
+| `created_at` | Date du suivi |
+
+### `network_ports`
+
+Interfaces reseau des appareils.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `site_id` | Site du port |
+| `asset_id` | Materiel possedant le port |
+| `port_name` | Nom du port, par exemple `eth0` |
+| `mac_address` | Adresse MAC |
+| `port_type` | Type de port |
+| `created_at` | Date de creation |
+| `updated_at` | Date de derniere modification |
+
+### `ip_networks`
+
+Sous-reseaux IP.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `site_id` | Site du sous-reseau |
+| `network_name` | Nom fonctionnel |
+| `network_address` | Adresse reseau |
+| `subnet_mask` | Masque |
+| `gateway_address` | Passerelle |
+| `vlan_name` | Nom VLAN optionnel |
+| `vlan_tag` | Tag VLAN optionnel |
+| `created_at` | Date de creation |
+| `updated_at` | Date de derniere modification |
+
+### `ip_addresses`
+
+Adresses IP attribuees aux ports.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `site_id` | Site de l'adresse |
+| `network_port_id` | Port reseau |
+| `ip_network_id` | Sous-reseau |
+| `ip_address` | Adresse IP |
+| `created_at` | Date de creation |
+| `updated_at` | Date de derniere modification |
+
+### `audit_log`
+
+Journalisation des modifications.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `table_name` | Table modifiee |
+| `row_id` | Ligne concernee |
+| `action` | `INSERT`, `UPDATE` ou `DELETE` |
+| `old_data` | Anciennes valeurs |
+| `new_data` | Nouvelles valeurs |
+| `changed_by` | Utilisateur Oracle |
+| `changed_at` | Date de l'action |
+
+### `archives_materiel`
+
+Archive des materiels supprimes.
+
+| Champ | Utilite |
+|---|---|
+| `id` | Identifiant unique |
+| `original_table` | Table d'origine |
+| `original_id` | Identifiant d'origine |
+| `archived_data` | Donnees archivees |
+| `archived_by` | Utilisateur Oracle |
+| `archived_at` | Date d'archivage |
+
+## Contraintes Importantes
+
+- Les FK utilisent des noms singuliers et lisibles : `site_id`, `asset_id`, `user_id`, etc.
+- `assets(site_id, serial_number)` evite deux numeros de serie identiques dans un meme site.
+- `ip_networks(site_id, network_address, subnet_mask)` evite les doublons de sous-reseaux.
+- Les tables de liaison `profiles_users`, `groups_users` et `ticket_users` empechent les doublons avec des contraintes `UNIQUE`.
+- Les colonnes non vitales au projet ont ete supprimees pour garder un modele plus clair.

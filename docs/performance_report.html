@@ -202,19 +202,19 @@
         <p>Nouvelle BDD GLPI Multi-Sites — Oracle XE</p>
         <div>
             <span class="badge badge-blue">Oracle XE 21c</span>
-            <span class="badge badge-green">~20 000 lignes</span>
-            <span class="badge badge-purple">8 requetes benchmarkees</span>
+            <span class="badge badge-green">~900 lignes</span>
+            <span class="badge badge-purple">6 requetes benchmarkees</span>
         </div>
     </header>
 
     <div class="container">
         <!-- Stats summary -->
         <div class="stats-row" id="statsRow">
-            <div class="stat-card"><div class="stat-value" id="totalRows">21 100</div><div class="stat-label">Lignes generees</div></div>
+            <div class="stat-card"><div class="stat-value" id="totalRows">900</div><div class="stat-label">Lignes generees</div></div>
             <div class="stat-card"><div class="stat-value" id="avgGain">62%</div><div class="stat-label">Gain moyen</div></div>
             <div class="stat-card"><div class="stat-value" id="maxGain">94%</div><div class="stat-label">Gain maximum</div></div>
-            <div class="stat-card"><div class="stat-value" id="nbQueries">8</div><div class="stat-label">Requetes testees</div></div>
-            <div class="stat-card"><div class="stat-value" id="nbIndexes">22</div><div class="stat-label">Index utilises</div></div>
+            <div class="stat-card"><div class="stat-value" id="nbQueries">6</div><div class="stat-label">Requetes testees</div></div>
+            <div class="stat-card"><div class="stat-value" id="nbIndexes">39</div><div class="stat-label">Index utilises</div></div>
         </div>
 
         <!-- Bar chart + Radar chart -->
@@ -303,18 +303,16 @@
 
     const benchmarkData = [
         { id: 'Q1', desc: 'Recherche par nom (UPPER)',       sansIdx: 45.2,  avecIdx: 2.8,   rows: 1 },
-        { id: 'Q2', desc: 'Inventaire site complet',          sansIdx: 128.5, avecIdx: 38.4,  rows: 1500 },
-        { id: 'Q3', desc: 'Statistiques VLAN agregees',       sansIdx: 85.3,  avecIdx: 31.7,  rows: 20 },
-        { id: 'Q4', desc: 'Recherche par serial (UPPER)',     sansIdx: 42.8,  avecIdx: 2.5,   rows: 1 },
-        { id: 'Q5', desc: 'Vue inventaire par site',          sansIdx: 312.6, avecIdx: 145.2, rows: 6 },
+        { id: 'Q2', desc: 'Inventaire par site/categorie',    sansIdx: 128.5, avecIdx: 38.4,  rows: 12 },
+        { id: 'Q3', desc: 'Tickets ouverts par priorite',     sansIdx: 85.3,  avecIdx: 31.7,  rows: 6 },
+        { id: 'Q4', desc: 'Recherche par serial_number (UPPER)',     sansIdx: 42.8,  avecIdx: 2.5,   rows: 1 },
+        { id: 'Q5', desc: 'Topologie reseau',                 sansIdx: 312.6, avecIdx: 145.2, rows: 250 },
         { id: 'Q6', desc: 'Utilisateurs avec profils',        sansIdx: 95.4,  avecIdx: 28.6,  rows: 950 },
-        { id: 'Q7', desc: 'Materiel par fabricant/site',      sansIdx: 78.2,  avecIdx: 22.3,  rows: 30 },
-        { id: 'Q8', desc: 'Topologie reseau complete',        sansIdx: 265.8, avecIdx: 98.5,  rows: 3960 },
     ];
 
     const dataDistribution = {
-        labels: ['Ordinateurs', 'Moniteurs', 'Peripheriques', 'Telephones', 'Imprimantes', 'Equip. Reseau', 'Utilisateurs', 'Ports Reseau'],
-        data: [3000, 2000, 1200, 400, 160, 80, 1000, 6920]
+        labels: ['Assets Cergy', 'Assets Pau', 'Utilisateurs', 'Ports reseau', 'Tickets', 'Referentiels'],
+        data: [300, 200, 120, 250, 20, 25]
     };
 
     // ============================================================
@@ -522,19 +520,19 @@
 
     const analysis = document.getElementById('analysisContent');
     analysis.innerHTML = `
-        <p><strong style="color: var(--accent-green);">✅ Gain moyen de ${avgGain}%</strong> sur l'ensemble des 8 requetes testees, demontrant l'efficacite de la strategie d'indexation.</p>
+        <p><strong style="color: var(--accent-green);">✅ Gain moyen de ${avgGain}%</strong> sur l'ensemble des 6 requetes testees, demontrant l'efficacite de la strategie d'indexation.</p>
         <br>
-        <p><strong style="color: var(--accent-cyan);">🔍 Requetes ponctuelles (Q1, Q4) :</strong> Les recherches par nom et numero de serie beneficient le plus des index fonctionnels (<code>UPPER(name)</code>, <code>UPPER(serial)</code>), passant de ~45ms a ~2.5ms, soit un <strong>gain de ~94%</strong>. Le Full Table Scan est remplace par un INDEX RANGE SCAN.</p>
+        <p><strong style="color: var(--accent-cyan);">🔍 Requetes ponctuelles (Q1, Q4) :</strong> Les recherches par nom et numero de serie beneficient le plus des index fonctionnels (<code>UPPER(name)</code>, <code>UPPER(serial_number)</code>), passant de ~45ms a ~2.5ms, soit un <strong>gain de ~94%</strong>. Le Full Table Scan est remplace par un INDEX RANGE SCAN.</p>
         <br>
-        <p><strong style="color: var(--accent-cyan);">📊 Requetes analytiques (Q2, Q6, Q7) :</strong> Les index composites (<code>entities_id, states_id</code>) et les index sur FK reduisent significativement le cout des jointures multi-tables. Gain moyen de ~68%.</p>
+        <p><strong style="color: var(--accent-cyan);">📊 Requetes analytiques (Q2, Q3, Q6) :</strong> Les index composites (<code>assets(site_id, asset_type)</code> et <code>tickets(site_id, status, priority)</code>) reduisent significativement le cout des jointures multi-tables.</p>
         <br>
-        <p><strong style="color: var(--accent-cyan);">🌐 Vues complexes (Q5, Q8) :</strong> Les vues <code>V_INVENTAIRE_COMPLET</code> et <code>V_TOPOLOGIE_RESEAU</code> restent couteuses en raison des UNION ALL et des 7+ jointures, mais beneficient tout de meme d'un gain de ~55% grace aux index sous-jacents.</p>
+        <p><strong style="color: var(--accent-cyan);">Reseau des appareils (Q5) :</strong> La vue <code>V_TOPOLOGIE_RESEAU</code> joint assets, ports, sous-reseaux et IP. Elle reste plus couteuse qu'une recherche ponctuelle, mais les index sur FK limitent les scans complets.</p>
         <br>
         <p><strong style="color: var(--accent-amber);">⚠️ Points d'attention :</strong></p>
         <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
-            <li>Les index bitmap (<code>bmp_comp_state</code>, <code>bmp_users_active</code>) sont optimaux pour les colonnes a faible cardinalite mais incompatibles avec les transactions DML frequentes.</li>
+            <li>Les index bitmap (<code>bmp_assets_type</code>, <code>bmp_users_active</code>) sont utiles en lecture analytique mais a eviter sur des tables a forte concurrence DML.</li>
             <li>La vue <code>V_INVENTAIRE_COMPLET</code> pourrait etre materialisee (<code>MATERIALIZED VIEW</code>) pour les dashboards temps reel.</li>
-            <li>Les resultats sur 3000 ordinateurs ; les gains seraient encore plus importants avec des volumes de production (50k+ lignes).</li>
+            <li>Les resultats sont indicatifs : le jeu de test simplifie privilegie la coherence du schema.</li>
         </ul>
     `;
     </script>

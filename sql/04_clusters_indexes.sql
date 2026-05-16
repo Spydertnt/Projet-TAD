@@ -1,172 +1,237 @@
 -- ============================================================
 -- 04_clusters_indexes.sql
--- Clusters et Index — Optimisation des performances
--- Oracle XE
+-- Associations, strategie de clusters et index
+-- Oracle XE - Schema GLPI simplifie
 -- ============================================================
 
--- =========================
--- CLUSTERS
--- =========================
+-- ============================================================
+-- 1. ASSOCIATIONS PRINCIPALES ENTRE LES TABLES
+-- ============================================================
 
--- Les clusters physiques doivent etre definis avant la creation des tables.
--- Comme 02_schema_tables.sql cree deja les tables, ce script conserve
--- uniquement les index executables et documente les optimisations retenues.
+-- Sites et localisation
+-- sites
+--   -> sites(parent_site_id)
+--   -> locations(site_id)
+--   -> users(site_id)
+--   -> groups(site_id)
+--   -> assets(site_id)
+--   -> tickets(site_id)
+--   -> network_ports(site_id)
+--   -> ip_networks(site_id)
+--   -> ip_addresses(site_id)
 
--- =========================
--- INDEX B-TREE (jointures et recherches par FK)
--- =========================
+-- Utilisateurs et droits
+-- users
+--   -> users(supervisor_user_id)
+--   -> profiles_users(user_id)
+--   -> groups_users(user_id)
+--   -> assets(owner_user_id)
+--   -> assets(technician_user_id)
+--   -> tickets(requester_user_id)
+--   -> ticket_users(user_id)
+--   -> ticket_users(assigned_by_user_id)
+--   -> ticket_followups(user_id)
+--
+-- profiles
+--   -> profiles_users(profile_id)
+--
+-- groups
+--   -> groups(parent_group_id)
+--   -> groups_users(group_id)
+--   -> tickets(assigned_group_id)
 
--- === ENTITÉS & LOCALISATIONS ===
-CREATE INDEX idx_entities_parent ON entities(entities_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_entities_site ON entities(site_code)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_locations_entity ON locations(entities_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_locations_parent ON locations(locations_id)
-    TABLESPACE TS_INDEX;
+-- Inventaire
+-- locations
+--   -> locations(parent_location_id)
+--   -> users(location_id)
+--   -> assets(location_id)
+--
+-- manufacturers
+--   -> assets(manufacturer_id)
+--
+-- states
+--   -> assets(state_id)
+--
+-- assets
+--   -> tickets(asset_id)
+--   -> network_ports(asset_id)
 
--- === UTILISATEURS ===
-CREATE INDEX idx_users_entity ON users(entities_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_users_location ON users(locations_id)
-    TABLESPACE TS_INDEX;
--- CREATE INDEX idx_users_active ON users(is_active)
---     TABLESPACE TS_INDEX;
-CREATE INDEX idx_pu_user ON profiles_users(users_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_pu_profile ON profiles_users(profiles_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_pu_entity ON profiles_users(entities_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_gu_user ON groups_users(users_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_gu_group ON groups_users(groups_id)
-    TABLESPACE TS_INDEX;
+-- Support
+-- ticket_categories
+--   -> tickets(category_id)
+--
+-- tickets
+--   -> ticket_users(ticket_id)
+--   -> ticket_followups(ticket_id)
 
--- === MATÉRIELS ===
-CREATE INDEX idx_comp_entity ON computers(entities_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_comp_user ON computers(users_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_comp_location ON computers(locations_id)
-    TABLESPACE TS_INDEX;
--- CREATE INDEX idx_comp_state ON computers(states_id)
---     TABLESPACE TS_INDEX;
-CREATE INDEX idx_comp_manuf ON computers(manufacturers_id)
-    TABLESPACE TS_INDEX;
+-- Reseau
+-- network_ports
+--   -> ip_addresses(network_port_id)
+--
+-- ip_networks
+--   -> ip_addresses(ip_network_id)
 
-CREATE INDEX idx_mon_entity ON monitors(entities_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_mon_user ON monitors(users_id)
-    TABLESPACE TS_INDEX;
+-- ============================================================
+-- 2. CLUSTERS PHYSIQUES UTILISES
+-- ============================================================
 
-CREATE INDEX idx_per_entity ON peripherals(entities_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_pri_entity ON printers(entities_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_pho_entity ON phones(entities_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_neq_entity ON network_equipments(entities_id)
-    TABLESPACE TS_INDEX;
+-- IMPORTANT :
+-- Les CREATE CLUSTER et les index de cluster sont dans 02_schema_tables.sql.
+-- Oracle impose que le cluster et son index existent avant certaines
+-- operations sur les tables clusterisees, notamment les contraintes FK.
+-- Ce fichier garde donc uniquement les index classiques et la documentation.
 
--- === SUPPORT / TICKETS ===
-CREATE INDEX idx_ticket_entity ON tickets(entities_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_ticket_status ON tickets(status)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_ticket_requester ON tickets(requester_users_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_ticket_assigned_group ON tickets(assigned_groups_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_ticket_category ON tickets(ticket_categories_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_ticket_comp ON tickets(computers_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_ticket_pri ON tickets(printers_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_tf_ticket ON ticket_followups(tickets_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_tu_ticket ON ticket_users(tickets_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_tu_user ON ticket_users(users_id)
-    TABLESPACE TS_INDEX;
+-- Choix de conception :
+-- On ne cree pas un cluster global sur site_id.
+--
+-- Raison :
+-- site_id est une cle transversale presente dans beaucoup de tables.
+-- Si on clusterise tout par site_id, les tables assets, users ou tickets ne
+-- peuvent plus etre clusterisees avec leurs tables de detail. Or une table
+-- Oracle ne peut appartenir qu'a un seul cluster physique.
+--
+-- Strategie retenue :
+--   - garder site_id avec des index B-tree et composites ;
+--   - reserver les clusters aux associations parent/detail les plus consultees.
+--
+-- Exemple :
+--   tickets par site      -> index tickets(site_id, status, priority)
+--   assets par site/type  -> index assets(site_id, asset_type)
+--   reseau par site       -> index sur site_id + jointures reseau
 
--- === RÉSEAU ===
-CREATE INDEX idx_np_entity ON network_ports(entities_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_np_computer ON network_ports(computers_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_np_neq ON network_ports(network_equipments_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_np_printer ON network_ports(printers_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_nc_port1 ON network_connections(network_ports_id_1)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_nc_port2 ON network_connections(network_ports_id_2)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_npv_port ON network_port_vlans(network_ports_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_npv_vlan ON network_port_vlans(vlans_id)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_ipn_entity ON ip_networks(entities_id)
-    TABLESPACE TS_INDEX;
+-- Cluster CLUSTER_USER_RIGHTS
+-- Cle de cluster : user_id
+-- Tables :
+--   users(id)
+--   profiles_users(user_id)
+--   groups_users(user_id)
+-- But :
+--   charger rapidement un utilisateur avec ses profils et groupes.
 
--- =========================
--- INDEX COMPOSITES (requêtes multi-critères)
--- =========================
+-- Cluster CLUSTER_SITE_STRUCTURE
+-- Cle de cluster : site_id
+-- Tables :
+--   sites(id)
+--   locations(site_id)
+--   groups(site_id)
+--   ip_networks(site_id)
+-- But :
+--   accelerer les consultations par site sur les structures de base.
+--
+-- Pourquoi pas un cluster tickets ?
+--   tickets.description, tickets.resolution et ticket_followups.content sont
+--   des CLOB. Oracle XE ne supporte pas ce cas en cluster indexe classique
+--   dans ce schema, ce qui provoque ORA-03001.
 
--- Recherche de matériels par site et état
-CREATE INDEX idx_comp_entity_state ON computers(entities_id, states_id)
-    TABLESPACE TS_INDEX;
+-- Cluster CLUSTER_NETWORK_PORT_IPS
+-- Cle de cluster : network_port_id
+-- Tables :
+--   network_ports(id)
+--   ip_addresses(network_port_id)
+-- But :
+--   afficher rapidement les adresses IP associees a un port reseau.
 
--- Recherche de matériels par site et utilisateur
-CREATE INDEX idx_comp_entity_user ON computers(entities_id, users_id)
-    TABLESPACE TS_INDEX;
+-- Associations a ne PAS clusteriser en priorite :
+--   - manufacturers -> assets : petite table de reference, index suffisant.
+--   - states -> assets : petite table de reference, index suffisant.
+--   - ticket_categories -> tickets : cardinalite faible, index suffisant.
+--   - relations parent_* : auto-relations ponctuelles, index suffisant.
+--   - audit_log et archives_materiel : tables techniques, acces surtout par date
+--     ou par table d'origine.
 
--- Profils utilisateurs par entité
-CREATE INDEX idx_pu_entity_user ON profiles_users(entities_id, users_id)
-    TABLESPACE TS_INDEX;
+-- ============================================================
+-- 3. INDEX B-TREE SUR CLES ETRANGERES ET FILTRES FREQUENTS
+-- ============================================================
 
--- Suivi des tickets par site, statut et priorite
-CREATE INDEX idx_ticket_entity_status_priority ON tickets(entities_id, status, priority)
-    TABLESPACE TS_INDEX;
+-- Sites et localisation
+CREATE INDEX idx_sites_parent ON sites(parent_site_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_sites_code ON sites(site_code) TABLESPACE TS_INDEX;
+CREATE INDEX idx_locations_parent ON locations(parent_location_id) TABLESPACE TS_INDEX;
 
--- VLANs par entité et tag
--- CREATE INDEX idx_vlans_entity_tag ON vlans(entities_id, tag)
---     TABLESPACE TS_INDEX;
+-- Utilisateurs et droits
+CREATE INDEX idx_users_site ON users(site_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_users_location ON users(location_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_users_supervisor ON users(supervisor_user_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_pu_profile ON profiles_users(profile_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_pu_site ON profiles_users(site_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_groups_parent ON groups(parent_group_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_gu_group ON groups_users(group_id) TABLESPACE TS_INDEX;
 
--- =========================
--- INDEX FONCTIONNELS (recherche insensible à la casse)
--- =========================
+-- Inventaire
+CREATE INDEX idx_assets_site ON assets(site_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_assets_owner ON assets(owner_user_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_assets_technician ON assets(technician_user_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_assets_location ON assets(location_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_assets_manuf ON assets(manufacturer_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_assets_state ON assets(state_id) TABLESPACE TS_INDEX;
 
-CREATE INDEX idx_comp_name_upper ON computers(UPPER(name))
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_users_name_upper ON users(UPPER(name))
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_comp_serial_upper ON computers(UPPER(serial))
-    TABLESPACE TS_INDEX;
+-- Support
+CREATE INDEX idx_ticket_site ON tickets(site_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_asset ON tickets(asset_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_status ON tickets(status) TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_requester ON tickets(requester_user_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_assigned_group ON tickets(assigned_group_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_category ON tickets(category_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_created_at ON tickets(created_at) TABLESPACE TS_INDEX;
+CREATE INDEX idx_tu_ticket ON ticket_users(ticket_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_tu_user ON ticket_users(user_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_tu_assigned_by ON ticket_users(assigned_by_user_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_tf_ticket ON ticket_followups(ticket_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_tf_user ON ticket_followups(user_id) TABLESPACE TS_INDEX;
 
--- =========================
--- INDEX BITMAP (colonnes à faible cardinalité)
--- =========================
+-- Reseau
+CREATE INDEX idx_np_site ON network_ports(site_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_np_asset ON network_ports(asset_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_ipn_vlan_tag ON ip_networks(vlan_tag) TABLESPACE TS_INDEX;
+CREATE INDEX idx_ip_site ON ip_addresses(site_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_ip_network ON ip_addresses(ip_network_id) TABLESPACE TS_INDEX;
 
-CREATE BITMAP INDEX bmp_comp_state ON computers(states_id)
-    TABLESPACE TS_INDEX;
-CREATE BITMAP INDEX bmp_mon_state ON monitors(states_id)
-    TABLESPACE TS_INDEX;
-CREATE BITMAP INDEX bmp_users_active ON users(is_active)
-    TABLESPACE TS_INDEX;
-CREATE BITMAP INDEX bmp_np_type ON network_ports(instantiation_type)
-    TABLESPACE TS_INDEX;
+-- ============================================================
+-- 4. INDEX COMPOSITES POUR LES REQUETES METIER
+-- ============================================================
 
--- =========================
--- INDEX AUDIT
--- =========================
+CREATE INDEX idx_assets_site_type ON assets(site_id, asset_type) TABLESPACE TS_INDEX;
+CREATE INDEX idx_assets_site_state ON assets(site_id, state_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_assets_site_owner ON assets(site_id, owner_user_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_assets_site_location ON assets(site_id, location_id) TABLESPACE TS_INDEX;
 
-CREATE INDEX idx_audit_table ON audit_log(table_name)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_audit_date ON audit_log(change_date)
-    TABLESPACE TS_INDEX;
-CREATE INDEX idx_audit_table_record ON audit_log(table_name, record_id)
-    TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_site_status_priority ON tickets(site_id, status, priority) TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_asset_status ON tickets(asset_id, status) TABLESPACE TS_INDEX;
+CREATE INDEX idx_ticket_group_status ON tickets(assigned_group_id, status) TABLESPACE TS_INDEX;
+
+CREATE INDEX idx_pu_site_user ON profiles_users(site_id, user_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_network_site_address ON ip_networks(site_id, network_address) TABLESPACE TS_INDEX;
+CREATE INDEX idx_ip_network_address ON ip_addresses(ip_network_id, ip_address) TABLESPACE TS_INDEX;
+
+-- ============================================================
+-- 5. INDEX FONCTIONNELS
+-- ============================================================
+
+CREATE INDEX idx_assets_name_upper ON assets(UPPER(name)) TABLESPACE TS_INDEX;
+CREATE INDEX idx_assets_serial_upper ON assets(UPPER(serial_number)) TABLESPACE TS_INDEX;
+CREATE INDEX idx_users_login_upper ON users(UPPER(login)) TABLESPACE TS_INDEX;
+CREATE INDEX idx_users_email_upper ON users(UPPER(email)) TABLESPACE TS_INDEX;
+
+-- ============================================================
+-- 6. INDEX BITMAP POUR COLONNES A FAIBLE CARDINALITE
+-- ============================================================
+
+-- A utiliser surtout pour lecture analytique et benchmarks.
+-- Sur un systeme tres transactionnel, les bitmap index peuvent ralentir les
+-- INSERT/UPDATE concurrents.
+
+CREATE BITMAP INDEX bmp_assets_type ON assets(asset_type) TABLESPACE TS_INDEX;
+CREATE BITMAP INDEX bmp_users_active ON users(is_active) TABLESPACE TS_INDEX;
+CREATE BITMAP INDEX bmp_tickets_priority ON tickets(priority) TABLESPACE TS_INDEX;
+CREATE BITMAP INDEX bmp_np_type ON network_ports(port_type) TABLESPACE TS_INDEX;
+
+-- ============================================================
+-- 7. INDEX TABLES SYSTEME
+-- ============================================================
+
+CREATE INDEX idx_audit_table ON audit_log(table_name) TABLESPACE TS_INDEX;
+CREATE INDEX idx_audit_date ON audit_log(changed_at) TABLESPACE TS_INDEX;
+CREATE INDEX idx_audit_table_record ON audit_log(table_name, row_id) TABLESPACE TS_INDEX;
+
+CREATE INDEX idx_archives_original ON archives_materiel(original_table, original_id) TABLESPACE TS_INDEX;
+CREATE INDEX idx_archives_date ON archives_materiel(archived_at) TABLESPACE TS_INDEX;

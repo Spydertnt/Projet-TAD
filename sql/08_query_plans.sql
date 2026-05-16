@@ -1,209 +1,67 @@
 -- ============================================================
 -- 08_query_plans.sql
--- Analyse des Plans d'Exécution — Optimisation des requêtes
+-- Analyse des plans d'execution - Schema simplifie
 -- Oracle XE
 -- ============================================================
 
--- =========================
--- REQUÊTE 1 : Recherche d'un matériel par nom (SANS index fonctionnel)
--- =========================
+SET LINESIZE 180
+SET PAGESIZE 80
 
--- D'abord, désactiver l'index pour montrer la différence
--- ALTER INDEX idx_comp_name_upper INVISIBLE;
+-- Q1 : recherche d'un materiel par nom, index fonctionnel idx_assets_name_upper.
+EXPLAIN PLAN FOR
+SELECT a.id, a.name, a.serial_number, e.site_code
+FROM assets a
+    JOIN sites e ON a.site_id = e.id
+WHERE UPPER(a.name) LIKE 'PC-CERGY%';
 
-EXPLAIN PLAN SET STATEMENT_ID = 'Q1_SEARCH_NAME' FOR
-SELECT c.id, c.name, c.serial, e.name AS entite, m.name AS fabricant
-FROM computers c
-    JOIN entities e ON c.entities_id = e.id
-    LEFT JOIN manufacturers m ON c.manufacturers_id = m.id
-WHERE UPPER(c.name) = 'PC-CERGY-001';
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
 
-SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(
-    NULL, 'Q1_SEARCH_NAME', 'ALL'));
-
--- Après : réactiver l'index et relancer pour comparer
--- ALTER INDEX idx_comp_name_upper VISIBLE;
-
--- =========================
--- REQUÊTE 2 : Liste des matériels d'un site avec utilisateur
--- Requête fréquente — devrait utiliser l'index composite
--- =========================
-
-EXPLAIN PLAN SET STATEMENT_ID = 'Q2_SITE_ASSETS' FOR
-SELECT c.name, c.serial,
-       u.realname || ' ' || u.firstname AS proprietaire,
-       s.name AS etat,
-       l.completename AS localisation
-FROM computers c
-    JOIN entities e ON c.entities_id = e.id
-    LEFT JOIN users u ON c.users_id = u.id
-    LEFT JOIN states s ON c.states_id = s.id
-    LEFT JOIN locations l ON c.locations_id = l.id
+-- Q2 : inventaire d'un site par type, index composite idx_assets_site_type.
+EXPLAIN PLAN FOR
+SELECT e.site_code, a.asset_type, COUNT(*) AS nb_assets
+FROM assets a
+    JOIN sites e ON a.site_id = e.id
 WHERE e.site_code = 'CERGY'
-ORDER BY c.name;
+GROUP BY e.site_code, a.asset_type;
 
-SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(
-    NULL, 'Q2_SITE_ASSETS', 'ALL'));
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
 
--- =========================
--- REQUÊTE 3 : Statistiques réseau par VLAN
--- Requête agrégée avec jointures multiples
--- =========================
+-- Q3 : tickets ouverts par site et priorite, index idx_ticket_site_status_priority.
+EXPLAIN PLAN FOR
+SELECT e.site_code, t.status, t.priority, COUNT(*) AS nb_tickets
+FROM tickets t
+    JOIN sites e ON t.site_id = e.id
+WHERE t.status IN ('NOUVEAU', 'ASSIGNE', 'EN_COURS')
+GROUP BY e.site_code, t.status, t.priority;
 
-EXPLAIN PLAN SET STATEMENT_ID = 'Q3_VLAN_STATS' FOR
-SELECT v.name AS vlan_name, v.tag,
-       e.name AS entite,
-       COUNT(npv.id) AS nb_ports,
-       COUNT(DISTINCT np.computers_id) AS nb_computers,
-       COUNT(DISTINCT np.network_equipments_id) AS nb_equip_reseau
-FROM vlans v
-    JOIN entities e ON v.entities_id = e.id
-    LEFT JOIN network_port_vlans npv ON v.id = npv.vlans_id
-    LEFT JOIN network_ports np ON npv.network_ports_id = np.id
-GROUP BY v.name, v.tag, e.name
-ORDER BY v.tag;
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
 
-SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(
-    NULL, 'Q3_VLAN_STATS', 'ALL'));
+-- Q4 : recherche d'un numero de serie, index fonctionnel idx_assets_serial_upper.
+EXPLAIN PLAN FOR
+SELECT a.id, a.name, a.serial_number
+FROM assets a
+WHERE UPPER(a.serial_number) = 'SN-2026-CERGY-00001';
 
--- =========================
--- REQUÊTE 4 : Recherche par numéro de série (index fonctionnel)
--- =========================
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
 
-EXPLAIN PLAN SET STATEMENT_ID = 'Q4_SEARCH_SERIAL' FOR
-SELECT c.id, c.name, c.serial, e.name AS entite
-FROM computers c
-    JOIN entities e ON c.entities_id = e.id
-WHERE UPPER(c.serial) = 'SN-2026-00042';
+-- Q5 : reseau des appareils, index sur asset_id, network_port_id et ip_network_id.
+EXPLAIN PLAN FOR
+SELECT a.name, np.port_name, np.mac_address, ipn.network_name, ipn.vlan_tag, ia.ip_address
+FROM assets a
+    JOIN network_ports np ON np.asset_id = a.id
+    LEFT JOIN ip_addresses ia ON ia.network_port_id = np.id
+    LEFT JOIN ip_networks ipn ON ia.ip_network_id = ipn.id
+WHERE a.asset_type = 'NETWORK_EQUIPMENT';
 
-SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(
-    NULL, 'Q4_SEARCH_SERIAL', 'ALL'));
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
 
--- =========================
--- REQUÊTE 5 : Inventaire complet multi-tables (via la vue)
--- Mesure du coût de la vue V_INVENTAIRE_COMPLET
--- =========================
-
-EXPLAIN PLAN SET STATEMENT_ID = 'Q5_VIEW_INVENTAIRE' FOR
-SELECT type_materiel, COUNT(*) AS nombre
-FROM V_INVENTAIRE_COMPLET
-WHERE site = 'CERGY'
-GROUP BY type_materiel
-ORDER BY nombre DESC;
-
-SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(
-    NULL, 'Q5_VIEW_INVENTAIRE', 'ALL'));
-
--- =========================
--- REQUÊTE 6 : Jointure complexe utilisateurs-profils-entités
--- =========================
-
-EXPLAIN PLAN SET STATEMENT_ID = 'Q6_USER_PROFILES' FOR
-SELECT u.name AS login,
-       u.realname || ' ' || u.firstname AS nom,
-       p.name AS profil,
-       e.name AS entite_profil,
-       e.site_code
+-- Q6 : utilisateurs et profils.
+EXPLAIN PLAN FOR
+SELECT u.login, p.name AS profil, e.site_code
 FROM users u
-    JOIN profiles_users pu ON u.id = pu.users_id
-    JOIN profiles p ON pu.profiles_id = p.id
-    JOIN entities e ON pu.entities_id = e.id
-WHERE u.is_active = 1
-ORDER BY e.site_code, u.realname;
+    JOIN profiles_users pu ON pu.user_id = u.id
+    JOIN profiles p ON p.id = pu.profile_id
+    JOIN sites e ON e.id = pu.site_id
+WHERE u.is_active = 1;
 
-SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(
-    NULL, 'Q6_USER_PROFILES', 'ALL'));
-
--- =========================
--- REQUÊTE 7 : Requête distribuée (cross-site via DB Link)
--- Coût d'une requête fédérée
--- =========================
-
--- EXPLAIN PLAN SET STATEMENT_ID = 'Q7_DISTRIBUTED' FOR
--- SELECT c.name, c.serial, 'CERGY' AS site
--- FROM computers c
---     JOIN entities e ON c.entities_id = e.id
--- WHERE e.site_code = 'CERGY'
--- UNION ALL
--- SELECT c.name, c.serial, 'PAU' AS site
--- FROM computers@DBL_PAU c
---     JOIN entities@DBL_PAU e ON c.entities_id = e.id
--- WHERE e.site_code = 'PAU';
---
--- SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(
---     NULL, 'Q7_DISTRIBUTED', 'ALL'));
-
--- =========================
--- COMPARAISON AVANT/APRÈS INDEX
--- =========================
-
--- Étape 1 : Rendre les index invisibles
--- ALTER INDEX idx_comp_entity INVISIBLE;
--- ALTER INDEX idx_comp_entity_state INVISIBLE;
--- ALTER INDEX idx_comp_name_upper INVISIBLE;
--- ALTER INDEX idx_ticket_entity_status_priority INVISIBLE;
--- ALTER INDEX idx_ticket_assigned_group INVISIBLE;
-
--- Étape 2 : Exécuter les requêtes Q1, Q2, Q9 et noter le coût
--- (full table scan attendu)
-
--- Étape 3 : Rendre les index visibles
--- ALTER INDEX idx_comp_entity VISIBLE;
--- ALTER INDEX idx_comp_entity_state VISIBLE;
--- ALTER INDEX idx_comp_name_upper VISIBLE;
--- ALTER INDEX idx_ticket_entity_status_priority VISIBLE;
--- ALTER INDEX idx_ticket_assigned_group VISIBLE;
-
--- Étape 4 : Relancer les mêmes requêtes et comparer
--- (index scan attendu → coût réduit)
-
--- =========================
--- RÉSUMÉ DES MÉTRIQUES À OBSERVER
--- =========================
--- | Métrique          | Description                              |
--- |--------------------|------------------------------------------|
--- | Cost               | Coût estimé par l'optimiseur             |
--- | Rows               | Nombre de lignes estimées                |
--- | Bytes              | Volume de données estimé                 |
--- | Operation          | TABLE ACCESS FULL vs INDEX RANGE SCAN    |
--- | Predicate Info     | Filtres et conditions de jointure        |
--- | Time               | Temps estimé d'exécution                 |
--- =========================
--- REQUETE 8 : Topologie reseau complete (via la vue)
--- Mesure du cout de la vue V_TOPOLOGIE_RESEAU
--- =========================
-
-EXPLAIN PLAN SET STATEMENT_ID = 'Q8_VIEW_TOPOLOGIE' FOR
-SELECT port_id, nom_port, mac, type_port, equipement,
-       type_equipement, entite, site, vlan_name, adresse_ip
-FROM V_TOPOLOGIE_RESEAU
-WHERE site = 'CERGY';
-
-SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(
-    NULL, 'Q8_VIEW_TOPOLOGIE', 'ALL'));
-
--- =========================
--- REQUETE 9 : Tickets ouverts envoyes au service IT
--- Requete helpdesk frequente : site + statut + priorite
--- =========================
-
-EXPLAIN PLAN SET STATEMENT_ID = 'Q9_TICKETS_SUPPORT' FOR
-SELECT
-    t.ticket_id,
-    t.titre,
-    t.statut,
-    t.priorite,
-    t.demandeur,
-    t.techniciens,
-    t.groupe_it,
-    t.type_materiel,
-    t.nom_materiel,
-    t.date_creation
-FROM V_TICKETS_SUPPORT t
-WHERE t.site = 'CERGY'
-  AND t.statut IN ('NOUVEAU', 'ASSIGNE', 'EN_COURS')
-  AND t.priorite IN ('HAUTE', 'CRITIQUE')
-ORDER BY t.date_creation DESC;
-
-SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(
-    NULL, 'Q9_TICKETS_SUPPORT', 'ALL'));
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
