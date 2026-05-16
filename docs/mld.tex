@@ -1,0 +1,292 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{fancyvrb}
+
+\geometry{margin=2.2cm}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  urlcolor=blue
+}
+
+\title{MLD -- Base GLPI Multi-Sites}
+\author{Projet TAD -- CY Tech}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Notation}
+
+Ce MLD decrit le modele relationnel final. Les cles primaires sont notees \texttt{PK}, les cles etrangeres \texttt{FK}.
+
+\section{Organisation}
+
+\begin{Verbatim}[fontsize=\small]
+sites(
+  id PK,
+  name,
+  parent_site_id FK -> sites.id,
+  full_name,
+  site_code,
+  created_at,
+  updated_at
+)
+
+locations(
+  id PK,
+  site_id FK -> sites.id,
+  name,
+  parent_location_id FK -> locations.id,
+  full_name,
+  building,
+  room,
+  created_at,
+  updated_at
+)
+\end{Verbatim}
+
+\section{Referentiels}
+
+\begin{Verbatim}[fontsize=\small]
+manufacturers(
+  id PK,
+  name UNIQUE
+)
+
+states(
+  id PK,
+  name UNIQUE
+)
+
+ticket_categories(
+  id PK,
+  name UNIQUE,
+  description
+)
+\end{Verbatim}
+
+\section{Utilisateurs et droits}
+
+\begin{Verbatim}[fontsize=\small]
+users(
+  id PK,
+  login UNIQUE,
+  last_name,
+  first_name,
+  email,
+  phone,
+  site_id FK -> sites.id,
+  location_id FK -> locations.id,
+  supervisor_user_id FK -> users.id,
+  is_active,
+  created_at,
+  updated_at
+)
+
+profiles(
+  id PK,
+  name UNIQUE,
+  interface,
+  is_default
+)
+
+profiles_users(
+  id PK,
+  user_id FK -> users.id,
+  profile_id FK -> profiles.id,
+  site_id FK -> sites.id,
+  is_recursive,
+  UNIQUE(user_id, profile_id, site_id)
+)
+
+groups(
+  id PK,
+  site_id FK -> sites.id,
+  name,
+  parent_group_id FK -> groups.id,
+  full_name,
+  created_at,
+  updated_at
+)
+
+groups_users(
+  id PK,
+  user_id FK -> users.id,
+  group_id FK -> groups.id,
+  is_manager,
+  UNIQUE(user_id, group_id)
+)
+\end{Verbatim}
+
+\section{Inventaire}
+
+\begin{Verbatim}[fontsize=\small]
+assets(
+  id PK,
+  site_id FK -> sites.id,
+  asset_type,
+  name,
+  serial_number,
+  owner_user_id FK -> users.id,
+  technician_user_id FK -> users.id,
+  location_id FK -> locations.id,
+  manufacturer_id FK -> manufacturers.id,
+  state_id FK -> states.id,
+  created_at,
+  updated_at,
+  UNIQUE(site_id, serial_number)
+)
+\end{Verbatim}
+
+\section{Support}
+
+\begin{Verbatim}[fontsize=\small]
+tickets(
+  id PK,
+  site_id FK -> sites.id,
+  asset_id FK -> assets.id ON DELETE CASCADE,
+  title,
+  description,
+  status,
+  priority,
+  requester_user_id FK -> users.id,
+  assigned_group_id FK -> groups.id,
+  category_id FK -> ticket_categories.id,
+  resolution,
+  created_at,
+  updated_at,
+  assigned_at,
+  resolved_at,
+  closed_at
+)
+
+ticket_users(
+  id PK,
+  ticket_id FK -> tickets.id ON DELETE CASCADE,
+  user_id FK -> users.id,
+  assigned_by_user_id FK -> users.id,
+  assigned_at,
+  UNIQUE(ticket_id, user_id)
+)
+
+ticket_followups(
+  id PK,
+  ticket_id FK -> tickets.id ON DELETE CASCADE,
+  user_id FK -> users.id,
+  content,
+  created_at
+)
+\end{Verbatim}
+
+\section{Reseau}
+
+\begin{Verbatim}[fontsize=\small]
+network_ports(
+  id PK,
+  site_id FK -> sites.id,
+  asset_id FK -> assets.id ON DELETE CASCADE,
+  port_name,
+  mac_address,
+  port_type,
+  created_at,
+  updated_at
+)
+
+ip_networks(
+  id PK,
+  site_id FK -> sites.id,
+  network_name,
+  network_address,
+  subnet_mask,
+  gateway_address,
+  vlan_name,
+  vlan_tag,
+  created_at,
+  updated_at,
+  UNIQUE(site_id, network_address, subnet_mask)
+)
+
+ip_addresses(
+  id PK,
+  site_id FK -> sites.id,
+  network_port_id FK -> network_ports.id ON DELETE SET NULL,
+  ip_network_id FK -> ip_networks.id,
+  ip_address,
+  created_at,
+  updated_at
+)
+\end{Verbatim}
+
+\section{Systeme}
+
+\begin{Verbatim}[fontsize=\small]
+audit_log(
+  id PK,
+  table_name,
+  row_id,
+  action,
+  old_data,
+  new_data,
+  changed_by,
+  changed_at
+)
+
+archives_materiel(
+  id PK,
+  original_table,
+  original_id,
+  archived_data,
+  archived_by,
+  archived_at
+)
+\end{Verbatim}
+
+\section{Cardinalites principales}
+
+\begin{longtable}{|p{8cm}|p{4cm}|}
+\hline
+\textbf{Relation} & \textbf{Cardinalite} \\
+\hline
+\texttt{sites -> locations} & 1,N \\
+\hline
+\texttt{sites -> users} & 1,N \\
+\hline
+\texttt{sites -> groups} & 1,N \\
+\hline
+\texttt{sites -> assets} & 1,N \\
+\hline
+\texttt{sites -> tickets} & 1,N \\
+\hline
+\texttt{users -> profiles\_users} & 1,N \\
+\hline
+\texttt{profiles -> profiles\_users} & 1,N \\
+\hline
+\texttt{users -> groups\_users} & 1,N \\
+\hline
+\texttt{groups -> groups\_users} & 1,N \\
+\hline
+\texttt{assets -> tickets} & 1,N \\
+\hline
+\texttt{tickets -> ticket\_users} & 1,N \\
+\hline
+\texttt{tickets -> ticket\_followups} & 1,N \\
+\hline
+\texttt{assets -> network\_ports} & 1,N \\
+\hline
+\texttt{network\_ports -> ip\_addresses} & 1,N \\
+\hline
+\texttt{ip\_networks -> ip\_addresses} & 1,N \\
+\hline
+\end{longtable}
+
+\end{document}

@@ -1,0 +1,342 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{fancyvrb}
+
+\geometry{margin=2.2cm}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  urlcolor=blue
+}
+
+\title{Documentation technique -- Base GLPI Multi-Sites}
+\author{Projet TAD -- CY Tech}
+\date{}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Vue d'ensemble}
+
+Le projet modelise une base GLPI simplifiee pour deux sites : \texttt{CERGY} et \texttt{PAU}. Le modele est centre sur la table \texttt{assets}, qui regroupe les ordinateurs, imprimantes, telephones, peripheriques, moniteurs et equipements reseau.
+
+La BDDR est simulee sur une seule instance Oracle avec deux schemas locaux :
+
+\begin{itemize}
+  \item \texttt{GLPI\_CERGY}
+  \item \texttt{GLPI\_PAU}
+\end{itemize}
+
+Ces schemas exposent des vues filtrees par \texttt{sites.site\_code}, puis des DB links locaux permettent de montrer une interrogation inter-sites.
+
+\section{Diagrammes}
+
+\begin{longtable}{|p{5cm}|p{8cm}|}
+\hline
+\textbf{Diagramme} & \textbf{Fichier} \\
+\hline
+Architecture & \texttt{docs/diagrams/architecture.svg} \\
+\hline
+MCD & \texttt{docs/diagrams/mcd.svg} \\
+\hline
+UML & \texttt{docs/diagrams/uml.svg} \\
+\hline
+MLD textuel & \texttt{docs/mld.md} \\
+\hline
+\end{longtable}
+
+\section{Tables}
+
+\subsection{\texttt{sites}}
+
+Represente les sites ou structures organisationnelles. Les sites physiques sont identifies par \texttt{site\_code = 'CERGY'} ou \texttt{site\_code = 'PAU'}.
+
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Champ} & \textbf{Role} \\
+\hline
+\texttt{id} & Identifiant du site. \\
+\hline
+\texttt{name} & Nom court. \\
+\hline
+\texttt{parent\_site\_id} & Site parent, pour une hierarchie simple. \\
+\hline
+\texttt{full\_name} & Nom complet lisible. \\
+\hline
+\texttt{site\_code} & Code de distribution des donnees. \\
+\hline
+\texttt{created\_at}, \texttt{updated\_at} & Dates techniques. \\
+\hline
+\end{longtable}
+
+\subsection{\texttt{locations}}
+
+Emplacements physiques des utilisateurs et materiels : batiments, salles, bureaux.
+
+\subsection{\texttt{manufacturers}}
+
+Referentiel des fabricants : Dell, HP, Lenovo, Cisco, Epson, Apple, Samsung, Ubiquiti.
+
+\subsection{\texttt{states}}
+
+Referentiel d'etat des materiels : en service, stock, maintenance, hors service, a renouveler.
+
+\subsection{\texttt{users}}
+
+Utilisateurs metier, demandeurs, techniciens et responsables.
+
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Champ} & \textbf{Role} \\
+\hline
+\texttt{login} & Identifiant unique. \\
+\hline
+\texttt{site\_id} & Site principal. \\
+\hline
+\texttt{location\_id} & Localisation principale. \\
+\hline
+\texttt{supervisor\_user\_id} & Responsable hierarchique. \\
+\hline
+\texttt{is\_active} & Activation du compte. \\
+\hline
+\end{longtable}
+
+\subsection{\texttt{profiles}}
+
+Profils applicatifs simplifies : administrateur, technicien, manager site, utilisateur.
+
+\subsection{\texttt{profiles\_users}}
+
+Association entre utilisateur, profil et site. Le champ \texttt{is\_recursive} permet d'etendre le profil a des sous-sites.
+
+\subsection{\texttt{groups}}
+
+Groupes fonctionnels par site : support IT, equipe reseau, administration.
+
+\subsection{\texttt{groups\_users}}
+
+Association entre utilisateurs et groupes. Le champ \texttt{is\_manager} indique un responsable de groupe.
+
+\subsection{\texttt{assets}}
+
+Table centrale de l'inventaire. Elle evite de multiplier les tables par type de materiel.
+
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Champ} & \textbf{Role} \\
+\hline
+\texttt{asset\_type} & Type fonctionnel : \texttt{COMPUTER}, \texttt{PRINTER}, etc. \\
+\hline
+\texttt{serial\_number} & Numero de serie, unique par site. \\
+\hline
+\texttt{owner\_user\_id} & Utilisateur principal. \\
+\hline
+\texttt{technician\_user\_id} & Technicien responsable. \\
+\hline
+\texttt{manufacturer\_id} & Fabricant. \\
+\hline
+\texttt{state\_id} & Etat du materiel. \\
+\hline
+\end{longtable}
+
+\subsection{\texttt{ticket\_categories}}
+
+Referentiel des categories support : incident materiel, demande reseau, installation, acces utilisateur, gestion du stock.
+
+\subsection{\texttt{tickets}}
+
+Demandes et incidents lies a un materiel.
+
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Champ} & \textbf{Role} \\
+\hline
+\texttt{asset\_id} & Materiel concerne. \\
+\hline
+\texttt{requester\_user\_id} & Demandeur. \\
+\hline
+\texttt{assigned\_group\_id} & Groupe support affecte. \\
+\hline
+\texttt{status} & Cycle de vie : nouveau, assigne, en cours, resolu, clos. \\
+\hline
+\texttt{priority} & Priorite. \\
+\hline
+\texttt{description}, \texttt{resolution} & Textes longs en CLOB. \\
+\hline
+\end{longtable}
+
+\subsection{\texttt{ticket\_users}}
+
+Techniciens affectes a un ticket. Un trigger verifie que l'utilisateur affecte possede le profil \texttt{Technicien}.
+
+\subsection{\texttt{ticket\_followups}}
+
+Historique textuel d'un ticket : demande initiale, diagnostic, resolution.
+
+\subsection{\texttt{network\_ports}}
+
+Ports reseau rattaches aux assets. Un equipement peut avoir plusieurs ports.
+
+\subsection{\texttt{ip\_networks}}
+
+Sous-reseaux IP d'un site : utilisateurs, serveurs, imprimantes, Wi-Fi. Les colonnes \texttt{vlan\_name} et \texttt{vlan\_tag} representent le VLAN sans table supplementaire.
+
+\subsection{\texttt{ip\_addresses}}
+
+Adresses IP affectees aux ports reseau.
+
+\subsection{\texttt{audit\_log}}
+
+Journal d'audit alimente par le trigger \texttt{TRG\_AUDIT\_ASSETS}.
+
+\subsection{\texttt{archives\_materiel}}
+
+Archive fonctionnelle des assets supprimes, alimentee avant suppression par \texttt{TRG\_ARCHIVE\_ASSET\_DELETE}.
+
+\section{Vues metier}
+
+\begin{longtable}{|p{5cm}|p{9cm}|}
+\hline
+\textbf{Vue} & \textbf{Utilite} \\
+\hline
+\texttt{V\_INVENTAIRE\_COMPLET} & Inventaire enrichi avec site, localisation, proprietaire, fabricant et etat. \\
+\hline
+\texttt{V\_MATERIEL\_PAR\_SITE} & Comptage des materiels par site et type. \\
+\hline
+\texttt{V\_UTILISATEURS\_PROFILS} & Liste des utilisateurs avec profils et sites d'application. \\
+\hline
+\texttt{V\_TOPOLOGIE\_RESEAU} & Vue des ports, IP, sous-reseaux et VLAN. \\
+\hline
+\texttt{V\_STATISTIQUES\_SITE} & Indicateurs par site. \\
+\hline
+\texttt{V\_MATERIEL\_RECENT} & Materiels modifies dans les 30 derniers jours. \\
+\hline
+\texttt{V\_TICKETS\_SUPPORT} & Tickets enrichis avec demandeur, techniciens, groupe, categorie et materiel. \\
+\hline
+\end{longtable}
+
+\section{Fonctions PL/SQL}
+
+\begin{longtable}{|p{5cm}|p{4cm}|p{5cm}|}
+\hline
+\textbf{Fonction} & \textbf{Parametres} & \textbf{Role} \\
+\hline
+\texttt{FN\_COMPTER\_MATERIEL\_SITE} & \texttt{p\_site\_code} & Retourne le nombre d'assets d'un site. \\
+\hline
+\texttt{FN\_CALCULER\_TAUX\_UTILISATION} & \texttt{p\_asset\_id} & Calcule le pourcentage de ports avec IP. \\
+\hline
+\texttt{FN\_OBTENIR\_SITE\_ENTITE} & \texttt{p\_site\_id} & Remonte la hierarchie pour retrouver le code site. \\
+\hline
+\texttt{FN\_VERIFIER\_QUOTA\_MATERIEL} & \texttt{p\_site\_code}, \texttt{p\_quota\_max} & Indique si le quota est atteint. \\
+\hline
+\end{longtable}
+
+\section{Procedures PL/SQL}
+
+\begin{longtable}{|p{5cm}|p{9cm}|}
+\hline
+\textbf{Procedure} & \textbf{Role} \\
+\hline
+\texttt{SP\_TRANSFERT\_MATERIEL} & Simule le transfert inter-sites d'un materiel. \\
+\hline
+\texttt{SP\_AFFECTER\_PROFIL} & Cree ou met a jour l'affectation d'un profil utilisateur. \\
+\hline
+\texttt{SP\_CREER\_TICKET\_MATERIEL} & Cree un ticket sur un asset. \\
+\hline
+\texttt{SP\_ASSIGNER\_TECH\_TICKET} & Affecte un technicien a un ticket existant. \\
+\hline
+\texttt{SP\_INVENTAIRE\_SITE} & Affiche un resume par site. \\
+\hline
+\texttt{SP\_NETTOYER\_ARCHIVES} & Supprime les archives trop anciennes. \\
+\hline
+\texttt{SP\_GENERER\_JEU\_DE\_TEST} & Genere les donnees de test enrichies. \\
+\hline
+\texttt{SP\_REPLIQUER\_REFERENTIELS} & Procedure de demonstration BDDR locale. \\
+\hline
+\end{longtable}
+
+\section{Triggers}
+
+\begin{longtable}{|p{5cm}|p{3cm}|p{6cm}|}
+\hline
+\textbf{Trigger} & \textbf{Table} & \textbf{Role} \\
+\hline
+\texttt{TRG\_AUTO\_DATE\_MOD\_ASSETS} & \texttt{assets} & Met a jour \texttt{updated\_at}. \\
+\hline
+\texttt{TRG\_AUTO\_DATE\_MOD\_USERS} & \texttt{users} & Met a jour \texttt{updated\_at}. \\
+\hline
+\texttt{TRG\_AUTO\_DATE\_MOD\_NETPORTS} & \texttt{network\_ports} & Met a jour \texttt{updated\_at}. \\
+\hline
+\texttt{TRG\_AUTO\_DATE\_MOD\_TICKETS} & \texttt{tickets} & Met a jour les dates du workflow. \\
+\hline
+\texttt{TRG\_CHECK\_TICKET\_USER\_TECH} & \texttt{ticket\_users} & Interdit d'affecter un non-technicien. \\
+\hline
+\texttt{TRG\_AUDIT\_ASSETS} & \texttt{assets} & Journalise les changements. \\
+\hline
+\texttt{TRG\_ARCHIVE\_ASSET\_DELETE} & \texttt{assets} & Archive avant suppression. \\
+\hline
+\texttt{TRG\_CASCADE\_SITE\_CODE} & \texttt{sites} & Propage un changement de code site. \\
+\hline
+\end{longtable}
+
+\section{Clusters et index}
+
+Les clusters physiques sont crees dans \texttt{02\_schema\_tables.sql}.
+
+\begin{longtable}{|p{5cm}|p{3cm}|p{6cm}|}
+\hline
+\textbf{Cluster} & \textbf{Cle} & \textbf{Tables} \\
+\hline
+\texttt{cluster\_user\_rights} & \texttt{user\_id} & \texttt{users}, \texttt{profiles\_users}, \texttt{groups\_users} \\
+\hline
+\texttt{cluster\_site\_structure} & \texttt{site\_id} & \texttt{sites}, \texttt{locations}, \texttt{groups}, \texttt{ip\_networks} \\
+\hline
+\texttt{cluster\_network\_port\_ips} & \texttt{network\_port\_id} & \texttt{network\_ports}, \texttt{ip\_addresses} \\
+\hline
+\end{longtable}
+
+\section{BDDR locale}
+
+Le fichier \texttt{07\_bddr.sql} cree deux schemas de simulation :
+
+\begin{itemize}
+  \item \texttt{GLPI\_CERGY} expose les vues du fragment Cergy ;
+  \item \texttt{GLPI\_PAU} expose les vues du fragment Pau.
+\end{itemize}
+
+Chaque schema peut interroger l'autre via un DB link local :
+
+\begin{itemize}
+  \item \texttt{lien\_pau} depuis \texttt{GLPI\_CERGY} ;
+  \item \texttt{lien\_cergy} depuis \texttt{GLPI\_PAU}.
+\end{itemize}
+
+Les vues globales \texttt{V\_ASSETS\_GLOBAL}, \texttt{V\_USERS\_GLOBAL}, \texttt{V\_STATS\_GLOBAL} et \texttt{V\_TICKETS\_GLOBAL} font des \texttt{UNION ALL} entre le fragment local et le fragment distant.
+
+\section{Donnees de test}
+
+Le jeu de test genere par \texttt{09\_test\_data.sql} contient par defaut :
+
+\begin{itemize}
+  \item 2 sites ;
+  \item 6 localisations ;
+  \item 300 utilisateurs ;
+  \item 1400 assets ;
+  \item plusieurs groupes, profils, categories, fabricants et etats ;
+  \item 8 sous-reseaux IP ;
+  \item des ports reseau et adresses IP ;
+  \item des tickets, affectations et suivis.
+\end{itemize}
+
+\end{document}

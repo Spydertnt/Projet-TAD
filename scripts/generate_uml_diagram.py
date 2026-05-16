@@ -76,20 +76,20 @@ def generate_uml():
         return h
 
     boxes = {
-        "Entity": (60, 120, 210, "#2563eb", ["+ id: NUMBER", "+ name: VARCHAR2", "+ siteCode: VARCHAR2", "+ parent: Entity"], []),
+        "Site": (60, 120, 210, "#2563eb", ["+ id: NUMBER", "+ name: VARCHAR2", "+ siteCode: VARCHAR2", "+ parent: Site"], []),
         "Location": (330, 120, 220, "#2563eb", ["+ id: NUMBER", "+ name: VARCHAR2", "+ building: VARCHAR2", "+ room: VARCHAR2"], []),
         "User": (610, 120, 230, "#0f766e", ["+ id: NUMBER", "+ login: VARCHAR2", "+ email: VARCHAR2", "+ isActive: NUMBER"], []),
         "Profile": (900, 120, 190, "#0f766e", ["+ id: NUMBER", "+ name: VARCHAR2", "+ interface: VARCHAR2"], []),
         "Group": (1150, 120, 210, "#0f766e", ["+ id: NUMBER", "+ name: VARCHAR2", "+ parent: Group"], []),
-        "ProfileAssignment": (900, 315, 230, "#0f766e", ["+ id: NUMBER", "+ isRecursive: NUMBER"], []),
-        "GroupMembership": (1180, 315, 220, "#0f766e", ["+ id: NUMBER", "+ isManager: NUMBER"], []),
+        "ProfileUser": (900, 315, 230, "#0f766e", ["+ id: NUMBER", "+ isRecursive: NUMBER"], []),
+        "GroupUser": (1180, 315, 220, "#0f766e", ["+ id: NUMBER", "+ isManager: NUMBER"], []),
         "Asset": (380, 390, 270, "#dc2626", ["+ id: NUMBER", "+ assetType: VARCHAR2", "+ name: VARCHAR2", "+ serialNumber: VARCHAR2"], ["+ transferer(siteCible)", "+ archiver()"]),
         "Manufacturer": (60, 610, 210, "#7c3aed", ["+ id: NUMBER", "+ name: VARCHAR2"], []),
         "State": (60, 760, 210, "#7c3aed", ["+ id: NUMBER", "+ name: VARCHAR2"], []),
-        "Ticket": (760, 470, 250, "#ea580c", ["+ id: NUMBER", "+ title: VARCHAR2", "+ status: VARCHAR2", "+ priority: NUMBER", "+ openingDate: DATE"], ["+ affecterTechnicien()", "+ cloturer()"]),
+        "Ticket": (760, 470, 250, "#ea580c", ["+ id: NUMBER", "+ title: VARCHAR2", "+ status: VARCHAR2", "+ priority: VARCHAR2", "+ createdAt: TIMESTAMP"], ["+ affecterTechnicien()", "+ cloturer()"]),
         "TicketCategory": (1070, 510, 220, "#ea580c", ["+ id: NUMBER", "+ name: VARCHAR2", "+ description: VARCHAR2"], []),
-        "TicketParticipant": (760, 720, 250, "#ea580c", ["+ id: NUMBER", "+ assignedBy: User", "+ assignedAt: TIMESTAMP"], []),
-        "TicketFollowup": (1070, 720, 230, "#ea580c", ["+ id: NUMBER", "+ content: CLOB", "+ isPrivate: NUMBER"], []),
+        "TicketUser": (760, 720, 250, "#ea580c", ["+ id: NUMBER", "+ assignedBy: User", "+ assignedAt: TIMESTAMP"], []),
+        "TicketFollowup": (1070, 720, 230, "#ea580c", ["+ id: NUMBER", "+ content: CLOB", "+ createdAt: TIMESTAMP"], []),
         "NetworkPort": (380, 610, 245, "#0891b2", ["+ id: NUMBER", "+ portName: VARCHAR2", "+ macAddress: VARCHAR2", "+ portType: VARCHAR2"], []),
         "IpNetwork": (820, 815, 240, "#0891b2", ["+ id: NUMBER", "+ networkAddress: VARCHAR2", "+ subnetMask: VARCHAR2", "+ gatewayAddress: VARCHAR2", "+ vlanTag: NUMBER"], []),
         "IpAddress": (1360, 610, 200, "#0891b2", ["+ id: NUMBER", "+ ipAddress: VARCHAR2"], []),
@@ -116,20 +116,20 @@ def generate_uml():
             svg.rect(mx - 58, my - 14, 116, 24, "#f8fafc", "#e2e8f0", 7)
             svg.text(mx, my + 4, label, 11, 700, color, "middle")
 
-    edge("Entity", "Location", "1", "0..*", "contient")
-    edge("Entity", "User", "1", "0..*", "rattache")
-    edge("Entity", "Group", "1", "0..*", "structure")
+    edge("Site", "Location", "1", "0..*", "contient")
+    edge("Site", "User", "1", "0..*", "rattache")
+    edge("Site", "Group", "1", "0..*", "structure")
     edge("Location", "Asset", "1", "0..*", "localise", "bottom", "top")
     edge("User", "Asset", "0..1", "0..*", "possede", "bottom", "top")
     edge("Manufacturer", "Asset", "1", "0..*", "fabrique")
     edge("State", "Asset", "1", "0..*", "etat")
-    edge("User", "ProfileAssignment", "1", "0..*", "profil", "right", "left")
-    edge("Profile", "ProfileAssignment", "1", "0..*", "", "bottom", "top")
-    edge("Group", "GroupMembership", "1", "0..*", "", "bottom", "top")
-    edge("User", "GroupMembership", "1", "0..*", "membre", "right", "left")
+    edge("User", "ProfileUser", "1", "0..*", "profil", "right", "left")
+    edge("Profile", "ProfileUser", "1", "0..*", "", "bottom", "top")
+    edge("Group", "GroupUser", "1", "0..*", "", "bottom", "top")
+    edge("User", "GroupUser", "1", "0..*", "membre", "right", "left")
     edge("Asset", "Ticket", "0..1", "0..*", "signale", "right", "left")
     edge("TicketCategory", "Ticket", "1", "0..*", "classe", "left", "right")
-    edge("Ticket", "TicketParticipant", "1", "0..*", "participants", "bottom", "top")
+    edge("Ticket", "TicketUser", "1", "0..*", "participants", "bottom", "top")
     edge("Ticket", "TicketFollowup", "1", "0..*", "suivis", "right", "left")
     edge("User", "Ticket", "1", "0..*", "demandeur", "bottom", "top", dash="5 5")
     edge("Group", "Ticket", "0..1", "0..*", "assigne", "bottom", "top", dash="5 5")

@@ -83,51 +83,68 @@ class Svg:
 
 
 def generate_architecture():
-    svg = Svg(1320, 820, "Architecture Oracle XE distribuee Cergy Pau")
-    svg.text(660, 46, "Architecture Oracle XE distribuee - Cergy / Pau", 28, 800, "#0f172a", "middle")
-    svg.text(660, 76, "Simulation BDDR locale par deux schemas Oracle et fragmentation par site", 15, 500, "#475569", "middle")
+    svg = Svg(1500, 980, "Architecture Oracle XE distribuee Cergy Pau")
+    svg.text(750, 46, "Architecture Oracle XE distribuee - Cergy / Pau", 28, 800, "#0f172a", "middle")
+    svg.text(750, 76, "Simulation BDDR locale par deux schemas Oracle et fragmentation par site", 15, 500, "#475569", "middle")
 
     sites = [
-        ("SITE CERGY", 70, 140, "#2563eb"),
-        ("SITE PAU", 790, 140, "#0f766e"),
+        ("SCHEMA GLPI_CERGY", 70, 125, "#2563eb"),
+        ("SCHEMA GLPI_PAU", 910, 125, "#0f766e"),
     ]
     for label, x, y, color in sites:
-        svg.rect(x, y, 460, 490, "#ffffff", "#cbd5e1", 18)
-        svg.text(x + 230, y + 38, label, 22, 800, color, "middle")
-        svg.text(x + 230, y + 66, "Schema Oracle local", 14, 600, "#475569", "middle")
+        svg.rect(x, y, 520, 470, "#ffffff", "#cbd5e1", 18)
+        svg.text(x + 260, y + 38, label, 22, 800, color, "middle")
+        svg.text(x + 260, y + 66, "Fragment logique expose par vues", 14, 600, "#475569", "middle")
 
-        svg.table(x + 35, y + 100, 180, "Tablespaces", [
-            "TS_MATERIEL",
-            "TS_UTILISATEURS",
-            "TS_RESEAU",
-            "TS_SUPPORT",
-            "TS_INDEX",
-        ], color)
-
-        svg.table(x + 245, y + 100, 180, "Donnees locales", [
+        svg.table(x + 30, y + 98, 215, "Fragmentees - org/users", [
             "sites",
             "locations",
-            "users / groups",
+            "users",
+            "profiles_users",
+            "groups",
+            "groups_users",
+        ], color)
+
+        svg.table(x + 275, y + 98, 215, "Fragmentees - metier", [
             "assets",
             "tickets",
-            "network_ports / IP",
+            "ticket_users",
+            "ticket_followups",
+            "network_ports",
+            "ip_networks",
+            "ip_addresses",
         ], "#64748b")
 
-        svg.table(x + 35, y + 310, 390, "Referentiels exposes", [
-            "manufacturers, states",
+        svg.table(x + 30, y + 315, 460, "Repliquees / communes", [
+            "manufacturers",
+            "states",
+            "profiles",
             "ticket_categories",
         ], "#7c3aed")
 
-    svg.line(535, 315, 785, 315, "#334155", 3, arrow=True)
-    svg.line(785, 370, 535, 370, "#334155", 3, arrow=True)
-    svg.text(660, 300, "Vues globales", 18, 800, "#0f172a", "middle")
-    svg.text(660, 348, "requete distante", 13, 600, "#475569", "middle")
-    svg.text(660, 402, "schemas GLPI_CERGY / GLPI_PAU", 13, 600, "#475569", "middle")
+    svg.line(600, 300, 900, 300, "#334155", 3, arrow=True)
+    svg.line(900, 355, 600, 355, "#334155", 3, arrow=True)
+    svg.text(750, 286, "DB links locaux", 18, 800, "#0f172a", "middle")
+    svg.text(750, 328, "lien_pau", 13, 700, "#475569", "middle")
+    svg.text(750, 382, "lien_cergy", 13, 700, "#475569", "middle")
 
-    svg.rect(240, 680, 840, 86, "#ecfeff", "#67e8f9", 18)
-    svg.text(660, 714, "Regle de distribution", 18, 800, "#0e7490", "middle")
-    svg.text(660, 744, "Les lignes operationnelles restent sur leur site selon sites.site_code.", 14, 600, "#155e75", "middle")
-    svg.text(660, 766, "Les vues globales interrogent les schemas GLPI_CERGY et GLPI_PAU.", 14, 600, "#155e75", "middle")
+    svg.rect(70, 635, 1360, 250, "#ffffff", "#cbd5e1", 18)
+    svg.text(750, 670, "Schema physique principal - 19 tables du modele", 20, 800, "#0f172a", "middle")
+    svg.text(750, 695, "Les fragments GLPI_CERGY et GLPI_PAU exposent ces tables par vues filtrees sur sites.site_code.", 13, 600, "#475569", "middle")
+
+    domains = [
+        ("Organisation", 110, ["sites", "locations"], "#2563eb"),
+        ("Utilisateurs", 310, ["users", "profiles", "profiles_users", "groups", "groups_users"], "#0f766e"),
+        ("Inventaire", 530, ["assets", "manufacturers", "states"], "#dc2626"),
+        ("Support", 750, ["ticket_categories", "tickets", "ticket_users", "ticket_followups"], "#ea580c"),
+        ("Reseau", 980, ["network_ports", "ip_networks", "ip_addresses"], "#0891b2"),
+        ("Systeme", 1200, ["audit_log", "archives_materiel"], "#64748b"),
+    ]
+    for title, x, fields, color in domains:
+        svg.table(x, 725, 180, title, fields, color)
+
+    svg.rect(330, 910, 840, 48, "#ecfeff", "#67e8f9", 16)
+    svg.text(750, 940, "Regle : les donnees operationnelles sont separees par sites.site_code = CERGY ou PAU.", 14, 700, "#155e75", "middle")
 
     svg.save(OUT / "architecture.svg")
 

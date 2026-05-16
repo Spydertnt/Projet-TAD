@@ -41,6 +41,8 @@ Projet-TAD/
 |-- docs/
 |   |-- rapport.md
 |   |-- presentation.md
+|   |-- mld.md
+|   |-- documentation_technique.md
 |   |-- reverse_engineering_glpi.md
 |   `-- diagrams/
 |       |-- architecture.svg
@@ -99,6 +101,14 @@ python scripts/generate_uml_diagram.py
 ```
 
 `generate_diagrams.py` genere `architecture.svg` et `mcd.svg`. `generate_uml_diagram.py` genere uniquement `uml.svg`.
+
+## Documentation
+
+- [MLD](docs/mld.md)
+- [MLD LaTeX](docs/mld.tex)
+- [Documentation technique](docs/documentation_technique.md)
+- [Documentation technique LaTeX](docs/documentation_technique.tex)
+- [Rapport](docs/rapport.md)
 
 ## Tables
 
