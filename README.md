@@ -39,18 +39,8 @@ La BDDR est simulee sur un seul PC avec deux utilisateurs Oracle locaux.
 Projet-TAD/
 |-- README.md
 |-- docs/
-|   |-- rapport.md
-|   |-- presentation.md
-|   |-- mld.md
-|   |-- documentation_technique.md
-|   |-- reverse_engineering_glpi.md
 |   `-- diagrams/
 |       |-- architecture.svg
-|       |-- mcd.svg
-|       `-- uml.svg
-|-- scripts/
-|   |-- generate_diagrams.py
-|   `-- generate_uml_diagram.py
 `-- sql/
     |-- 00_architecture.md
     |-- 00_run_all.sql
@@ -63,7 +53,8 @@ Projet-TAD/
     |-- 07_bddr.sql
     |-- 08_query_plans.sql
     |-- 09_test_data.sql
-    `-- 10_benchmark.sql
+    |-- 10_benchmark.sql
+    '-- 11_comparaisons.sql
 ```
 
 ## Execution
@@ -92,15 +83,6 @@ Execution fichier par fichier :
 @10_benchmark.sql
 @07_bddr.sql
 ```
-
-## Diagrammes
-
-```bash
-python scripts/generate_diagrams.py
-python scripts/generate_uml_diagram.py
-```
-
-`generate_diagrams.py` genere `architecture.svg` et `mcd.svg`. `generate_uml_diagram.py` genere uniquement `uml.svg`.
 
 ## Documentation
 
