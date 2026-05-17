@@ -1,0 +1,1044 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{fancyvrb}
+\usepackage{hyperref}
+\usepackage{titlesec}
+
+\geometry{margin=2.2cm}
+\setlist[itemize]{leftmargin=1.4em}
+\setlist[enumerate]{leftmargin=1.6em}
+\renewcommand{\arraystretch}{1.18}
+\graphicspath{{docs/diagrams/}{diagrams/}}
+
+\definecolor{primary}{HTML}{1D4ED8}
+\definecolor{secondary}{HTML}{0F766E}
+\definecolor{muted}{HTML}{475569}
+\definecolor{soft}{HTML}{F8FAFC}
+\definecolor{line}{HTML}{CBD5E1}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=primary,
+  urlcolor=primary,
+  citecolor=primary,
+  pdftitle={Rapport complet - Projet GLPI multi-site},
+  pdfauthor={Gournay Lucas, Chapin Florian, De Morais Theo}
+}
+
+\titleformat{\section}
+  {\Large\bfseries\color{primary}}
+  {\thesection}{0.6em}{}
+
+\titleformat{\subsection}
+  {\large\bfseries\color{secondary}}
+  {\thesubsection}{0.6em}{}
+
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{muted}}
+  {\thesubsubsection}{0.6em}{}
+
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\projecttitle}{Projet GLPI multi-site}
+\newcommand{\diagramplaceholder}[2]{%
+  \fbox{%
+    \begin{minipage}[c][7cm][c]{0.92\textwidth}
+      \centering
+      \textbf{#2}\\[0.4cm]
+      Le schema existe dans le depot sous \code{docs/diagrams/#1.svg}.\\
+      Pour l'afficher dans Overleaf, convertir ce fichier en \code{#1.pdf}
+      ou \code{#1.png}, puis l'uploader dans \code{docs/diagrams/}.
+    \end{minipage}%
+  }%
+}
+\newcommand{\insertdiagram}[2]{%
+  \IfFileExists{docs/diagrams/#1.pdf}{%
+    \includegraphics[width=\textwidth]{docs/diagrams/#1.pdf}%
+  }{%
+    \IfFileExists{docs/diagrams/#1.png}{%
+      \includegraphics[width=\textwidth]{docs/diagrams/#1.png}%
+    }{%
+      \IfFileExists{diagrams/#1.pdf}{%
+        \includegraphics[width=\textwidth]{diagrams/#1.pdf}%
+      }{%
+        \IfFileExists{diagrams/#1.png}{%
+          \includegraphics[width=\textwidth]{diagrams/#1.png}%
+        }{%
+          \diagramplaceholder{#1}{#2}%
+        }%
+      }%
+    }%
+  }%
+}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{1.2cm}
+  {\Huge\bfseries \projecttitle \par}
+  \vspace{0.35cm}
+  {\Large Rapport complet et detaille\par}
+  \vspace{0.3cm}
+  {\large Traitement et administration des donnees\par}
+  \vfill
+  \begin{tabular}{rl}
+    Etablissement & CY Tech \\
+    Projet & Refonte simplifiee d'une base GLPI sous Oracle XE \\
+    Perimetre & Campus de Cergy et Pau \\
+    Auteurs & Gournay Lucas, Chapin Florian, De Morais Theo \\
+  \end{tabular}
+  \vfill
+  {\large \today\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+\subsection{Contexte general}
+
+GLPI est une solution de gestion de parc informatique et de support. Son
+schema relationnel reel est tres riche, car il couvre un grand nombre de
+modules : inventaire, tickets, contrats, reseau, utilisateurs, droits,
+plugins et historique. Cette richesse devient cependant difficile a exploiter
+dans le cadre d'un mini-projet de base de donnees repartie : le modele initial
+comporte beaucoup de tables, peu de relations explicites faciles a presenter et
+plusieurs structures tres proches pour des objets materiels differents.
+
+Le projet propose donc une refonte simplifiee d'une base inspiree de GLPI pour
+deux campus, Cergy et Pau. L'objectif n'est pas de reproduire toute la base
+GLPI, mais de construire un noyau coherent, contraint, explicable et
+demonstrable sous Oracle XE. La conception conserve les notions importantes :
+organisation multi-sites, utilisateurs, profils, groupes, inventaire, tickets,
+reseau, audit, archivage, optimisation physique et simulation BDDR.
+
+\subsection{Objectifs du projet}
+
+Le projet poursuit cinq objectifs principaux, repris du plan de presentation :
+
+\begin{enumerate}
+  \item realiser un reverse engineering du modele GLPI pour identifier les
+  entites utiles au contexte pedagogique ;
+  \item produire un modele simplifie, lisible et justifie par un MCD et un MLD ;
+  \item proposer une architecture de base de donnees repartie entre Cergy et Pau ;
+  \item ajouter une logique metier PL/SQL garantissant l'integrite et les
+  traitements principaux ;
+  \item optimiser les acces avec tablespaces, clusters, index et mesures de
+  performance.
+\end{enumerate}
+
+\subsection{Plan suivi}
+
+Le rapport suit le plan de la presentation :
+
+\begin{longtable}{p{4cm}p{10cm}}
+\toprule
+\textbf{Partie de presentation} & \textbf{Traitement dans le rapport} \\
+\midrule
+Contexte et objectifs & Perimetre, limites de GLPI et objectifs Oracle. \\
+Reverse engineering et modelisation & Choix de simplification, MCD, MLD et contraintes. \\
+Architecture repartie & Fragmentation horizontale, schemas Cergy/Pau, DB links et vues globales. \\
+Optimisation physique & Tablespaces, clusters, index B-tree, composites, fonctionnels et bitmap. \\
+Logique metier PL/SQL & Procedures, fonctions, triggers, audit et securite. \\
+Analyse des performances & Protocole de benchmark et interpretation attendue. \\
+\bottomrule
+\end{longtable}
+
+\section{Analyse du probleme initial}
+
+\subsection{Complexite du modele GLPI}
+
+Le schema GLPI original contient plusieurs centaines de tables. Beaucoup de
+modules ne sont pas necessaires pour le perimetre du projet : contrats,
+licences, notifications, calendriers avances, plugins, historique detaille,
+relations reseau tres fines, etc. Conserver tout ce schema aurait rendu la base
+difficile a expliquer et a distribuer proprement.
+
+Le premier enjeu a donc ete de separer le coeur fonctionnel du bruit technique.
+Le coeur retenu correspond aux besoins suivants :
+
+\begin{itemize}
+  \item connaitre les sites et localisations physiques ;
+  \item gerer les utilisateurs et leurs droits principaux ;
+  \item inventorier les equipements informatiques ;
+  \item suivre les incidents ou demandes lies a un materiel ;
+  \item associer les materiels a des ports reseau et a des adresses IP ;
+  \item tracer les modifications importantes.
+\end{itemize}
+
+\subsection{Limites d'un modele trop proche de GLPI}
+
+Un modele trop proche de GLPI aurait pose plusieurs difficultes :
+
+\begin{itemize}
+  \item multiplication des tables de materiel, par exemple ordinateurs,
+  ecrans, imprimantes, telephones, peripheriques et equipements reseau ;
+  \item nombreuses associations polymorphes, difficiles a representer avec des
+  cles etrangeres simples ;
+  \item vues et requetes plus lourdes, car l'inventaire complet doit etre
+  reconstruit par unions ou jointures multiples ;
+  \item distribution moins lisible, car chaque famille d'objets aurait son
+  propre fragment ;
+  \item demonstration plus fragile, puisque le jury doit comprendre rapidement
+  le modele et ses choix.
+\end{itemize}
+
+\subsection{Strategie de simplification}
+
+La simplification principale consiste a centraliser tous les equipements dans
+une table unique \code{assets}. La colonne \code{asset_type} indique la nature du
+materiel :
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Type} & \textbf{Sens fonctionnel} \\
+\midrule
+\code{COMPUTER} & Ordinateur fixe ou portable. \\
+\code{MONITOR} & Ecran. \\
+\code{PERIPHERAL} & Peripherique general. \\
+\code{PRINTER} & Imprimante. \\
+\code{PHONE} & Telephone. \\
+\code{NETWORK_EQUIPMENT} & Switch, borne Wi-Fi, routeur ou equipement reseau. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Ce choix remplace plusieurs tables quasiment identiques par une structure
+commune. Il reduit les jointures, simplifie les vues metier et rend l'ajout
+d'un nouveau type de materiel possible sans modifier le schema.
+
+\section{Reverse engineering et modelisation}
+
+\subsection{Domaines fonctionnels conserves}
+
+Le modele final contient 19 tables, dont 17 tables fonctionnelles et 2 tables
+systeme. Elles sont reparties en six domaines :
+
+\begin{longtable}{p{3.5cm}p{10.5cm}}
+\toprule
+\textbf{Domaine} & \textbf{Tables} \\
+\midrule
+Organisation & \code{sites}, \code{locations}. \\
+Referentiels & \code{manufacturers}, \code{states}, \code{ticket_categories}. \\
+Utilisateurs et droits & \code{users}, \code{profiles}, \code{profiles_users}, \code{groups}, \code{groups_users}. \\
+Inventaire & \code{assets}. \\
+Support & \code{tickets}, \code{ticket_users}, \code{ticket_followups}. \\
+Reseau & \code{network_ports}, \code{ip_networks}, \code{ip_addresses}. \\
+Systeme & \code{audit_log}, \code{archives_materiel}. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Comparaison avant et apres simplification}
+
+\begin{longtable}{p{6.5cm}p{7.5cm}}
+\toprule
+\textbf{Probleme du modele source} & \textbf{Choix du modele final} \\
+\midrule
+Tables distinctes pour chaque type de materiel. & Une seule table \code{assets}, typee par \code{asset_type}. \\
+Relations polymorphes dans les tickets et les ports reseau. & Une seule cle etrangere \code{asset_id}. \\
+Nombreux referentiels utilisateurs secondaires. & Conservation des profils, groupes et affectations essentielles. \\
+Modele reseau tres fin. & Conservation des ports, sous-reseaux, VLAN et adresses IP. \\
+Historique disperse. & Tables systeme dediees pour l'audit et l'archivage. \\
+\bottomrule
+\end{longtable}
+
+\subsection{MCD du projet}
+
+Le MCD represente les entites retenues et leurs associations principales. Il
+met volontairement en avant la table centrale \code{assets}, reliee aux sites,
+aux utilisateurs, aux localisations, aux fabricants, aux etats, aux tickets et
+aux ports reseau.
+
+\begin{figure}[H]
+  \centering
+  \insertdiagram{mcd}{MCD simplifie de la base GLPI multi-site}
+  \caption{MCD simplifie de la base GLPI multi-site.}
+  \label{fig:mcd}
+\end{figure}
+
+La lecture du MCD se fait autour de quatre axes :
+
+\begin{itemize}
+  \item un site possede des localisations, des utilisateurs, des groupes, des
+  equipements, des tickets et des elements reseau ;
+  \item un utilisateur peut posseder un materiel, etre technicien responsable,
+  demander un ticket ou intervenir dans un suivi ;
+  \item un materiel peut avoir plusieurs tickets et plusieurs ports reseau ;
+  \item un ticket possede des affectations de techniciens et des suivis.
+\end{itemize}
+
+\subsection{Justification des cardinalites}
+
+\begin{longtable}{p{6cm}p{3cm}p{5cm}}
+\toprule
+\textbf{Relation} & \textbf{Cardinalite} & \textbf{Justification} \\
+\midrule
+\code{sites -> locations} & 1,N & Un campus ou service peut contenir plusieurs batiments ou salles. \\
+\code{sites -> users} & 1,N & Un utilisateur appartient a un site principal. \\
+\code{sites -> assets} & 1,N & Chaque equipement est rattache a un site proprietaire. \\
+\code{assets -> tickets} & 1,N & Un materiel peut generer plusieurs demandes support. \\
+\code{assets -> network_ports} & 1,N & Un equipement peut exposer plusieurs interfaces reseau. \\
+\code{network_ports -> ip_addresses} & 1,N & Un port peut recevoir une ou plusieurs adresses selon le contexte. \\
+\code{tickets -> ticket_followups} & 1,N & Un ticket contient un historique de commentaires. \\
+\code{users -> profiles_users} & 1,N & Un utilisateur peut avoir plusieurs profils selon le site. \\
+\bottomrule
+\end{longtable}
+
+\section{Modele logique de donnees}
+
+\subsection{Principes du MLD}
+
+Le MLD traduit le MCD en tables relationnelles Oracle. Les choix structurants
+sont les suivants :
+
+\begin{itemize}
+  \item chaque table possede une cle primaire numerique \code{id} ;
+  \item les relations sont exprimees par des cles etrangeres lisibles ;
+  \item les tables de liaison portent les associations N,N ;
+  \item les doublons fonctionnels sont evites par des contraintes
+  \code{UNIQUE} ;
+  \item les suppressions dependantes sont encadrees avec \code{ON DELETE CASCADE}
+  ou \code{ON DELETE SET NULL} selon le sens metier.
+\end{itemize}
+
+\subsection{Organisation}
+
+\begin{Verbatim}[fontsize=\small, frame=single]
+sites(
+  id PK,
+  name,
+  parent_site_id FK -> sites.id,
+  full_name,
+  site_code,
+  created_at,
+  updated_at
+)
+
+locations(
+  id PK,
+  site_id FK -> sites.id,
+  name,
+  parent_location_id FK -> locations.id,
+  full_name,
+  building,
+  room,
+  created_at,
+  updated_at
+)
+\end{Verbatim}
+
+\code{sites} porte la hierarchie logique et le code de distribution
+\code{site_code}. \code{locations} represente les lieux physiques, comme un
+batiment ou une salle.
+
+\subsection{Referentiels}
+
+\begin{Verbatim}[fontsize=\small, frame=single]
+manufacturers(id PK, name UNIQUE)
+states(id PK, name UNIQUE)
+ticket_categories(id PK, name UNIQUE, description)
+\end{Verbatim}
+
+Ces tables sont stables et peu volumineuses. Elles sont donc de bonnes
+candidates a la replication logique dans les deux schemas de simulation BDDR.
+
+\subsection{Utilisateurs, profils et groupes}
+
+\begin{Verbatim}[fontsize=\small, frame=single]
+users(
+  id PK,
+  login UNIQUE,
+  last_name,
+  first_name,
+  email,
+  phone,
+  site_id FK -> sites.id,
+  location_id FK -> locations.id,
+  supervisor_user_id FK -> users.id,
+  is_active,
+  created_at,
+  updated_at
+)
+
+profiles(id PK, name UNIQUE, interface, is_default)
+
+profiles_users(
+  id PK,
+  user_id FK -> users.id,
+  profile_id FK -> profiles.id,
+  site_id FK -> sites.id,
+  is_recursive,
+  UNIQUE(user_id, profile_id, site_id)
+)
+
+groups(
+  id PK,
+  site_id FK -> sites.id,
+  name,
+  parent_group_id FK -> groups.id,
+  full_name,
+  created_at,
+  updated_at
+)
+
+groups_users(
+  id PK,
+  user_id FK -> users.id,
+  group_id FK -> groups.id,
+  is_manager,
+  UNIQUE(user_id, group_id)
+)
+\end{Verbatim}
+
+Le couple \code{profiles} et \code{profiles_users} reprend l'idee GLPI
+d'affectation de profils selon un contexte. Les groupes servent principalement
+a representer les equipes support locales.
+
+\subsection{Inventaire}
+
+\begin{Verbatim}[fontsize=\small, frame=single]
+assets(
+  id PK,
+  site_id FK -> sites.id,
+  asset_type,
+  name,
+  serial_number,
+  owner_user_id FK -> users.id,
+  technician_user_id FK -> users.id,
+  location_id FK -> locations.id,
+  manufacturer_id FK -> manufacturers.id,
+  state_id FK -> states.id,
+  created_at,
+  updated_at,
+  UNIQUE(site_id, serial_number)
+)
+\end{Verbatim}
+
+\code{assets} est la table centrale du projet. La contrainte
+\code{UNIQUE(site_id, serial_number)} evite deux numeros de serie identiques
+sur un meme site, tout en laissant la possibilite theorique qu'un meme serial
+soit reutilise dans un autre fragment si le cas metier le permet.
+
+\subsection{Support}
+
+\begin{Verbatim}[fontsize=\small, frame=single]
+tickets(
+  id PK,
+  site_id FK -> sites.id,
+  asset_id FK -> assets.id ON DELETE CASCADE,
+  title,
+  description,
+  status,
+  priority,
+  requester_user_id FK -> users.id,
+  assigned_group_id FK -> groups.id,
+  category_id FK -> ticket_categories.id,
+  resolution,
+  created_at,
+  updated_at,
+  assigned_at,
+  resolved_at,
+  closed_at
+)
+
+ticket_users(
+  id PK,
+  ticket_id FK -> tickets.id ON DELETE CASCADE,
+  user_id FK -> users.id,
+  assigned_by_user_id FK -> users.id,
+  assigned_at,
+  UNIQUE(ticket_id, user_id)
+)
+
+ticket_followups(
+  id PK,
+  ticket_id FK -> tickets.id ON DELETE CASCADE,
+  user_id FK -> users.id,
+  content,
+  created_at
+)
+\end{Verbatim}
+
+Le support est volontairement centre sur un materiel. Un ticket est associe a
+un \code{asset_id}, ce qui simplifie l'analyse des incidents et la creation des
+vues metier.
+
+\subsection{Reseau}
+
+\begin{Verbatim}[fontsize=\small, frame=single]
+network_ports(
+  id PK,
+  site_id FK -> sites.id,
+  asset_id FK -> assets.id ON DELETE CASCADE,
+  port_name,
+  mac_address,
+  port_type,
+  created_at,
+  updated_at
+)
+
+ip_networks(
+  id PK,
+  site_id FK -> sites.id,
+  network_name,
+  network_address,
+  subnet_mask,
+  gateway_address,
+  vlan_name,
+  vlan_tag,
+  created_at,
+  updated_at,
+  UNIQUE(site_id, network_address, subnet_mask)
+)
+
+ip_addresses(
+  id PK,
+  site_id FK -> sites.id,
+  network_port_id FK -> network_ports.id ON DELETE SET NULL,
+  ip_network_id FK -> ip_networks.id,
+  ip_address,
+  created_at,
+  updated_at
+)
+\end{Verbatim}
+
+Le reseau est limite aux elements utiles pour une demonstration : ports, sous-
+reseaux, VLAN et adresses IP. Cette granularite suffit pour montrer des
+jointures et des statistiques sans introduire un modele reseau trop lourd.
+
+\subsection{Tables systeme}
+
+\begin{Verbatim}[fontsize=\small, frame=single]
+audit_log(
+  id PK,
+  table_name,
+  row_id,
+  action,
+  old_data,
+  new_data,
+  changed_by,
+  changed_at
+)
+
+archives_materiel(
+  id PK,
+  original_table,
+  original_id,
+  archived_data,
+  archived_by,
+  archived_at
+)
+\end{Verbatim}
+
+\code{audit_log} conserve les modifications significatives. \code{archives_materiel}
+garde une trace JSON d'un materiel avant suppression definitive.
+
+\section{Architecture repartie BDDR}
+
+\subsection{Principe general}
+
+La BDDR est simulee localement sous Oracle XE avec deux schemas :
+\code{GLPI_CERGY} et \code{GLPI_PAU}. Chaque schema expose le fragment logique
+de son site. Cette simulation garde les principes d'une base repartie tout en
+restant executable sur un seul poste.
+
+\begin{figure}[H]
+  \centering
+  \insertdiagram{architecture}{Architecture Oracle XE distribuee entre Cergy et Pau}
+  \caption{Architecture Oracle XE distribuee entre Cergy et Pau.}
+  \label{fig:architecture}
+\end{figure}
+
+\subsection{Fragmentation horizontale}
+
+La fragmentation repose sur \code{sites.site_code}. Les donnees operationnelles
+sont decoupees selon le site :
+
+\begin{longtable}{p{5cm}p{8.5cm}}
+\toprule
+\textbf{Famille de donnees} & \textbf{Strategie} \\
+\midrule
+Sites et localisations & Chaque schema expose les lignes de son site. \\
+Utilisateurs et groupes & Fragmentation par site de rattachement. \\
+Assets & Fragmentation par \code{assets.site_id}. \\
+Tickets et suivis & Fragmentation selon le site du ticket et du materiel. \\
+Reseau & Ports, sous-reseaux et IP filtres par site. \\
+Referentiels & Exposition commune dans les deux schemas. \\
+\bottomrule
+\end{longtable}
+
+Ce choix est naturel : Cergy heberge les equipements, utilisateurs, tickets et
+adresses de Cergy ; Pau heberge ceux de Pau. Les referentiels sont repliques
+car ils changent rarement et doivent rester disponibles des deux cotes.
+
+\subsection{Schemas, vues et synonyms}
+
+Le script \code{07_bddr.sql} cree les utilisateurs \code{glpi_cergy} et
+\code{glpi_pau}, puis expose des vues locales dans chaque schema. Les vues
+permettent de masquer le schema source et d'offrir une interface logique comme
+si chaque site possedait ses propres tables.
+
+Les database links \code{lien_pau} et \code{lien_cergy} permettent ensuite
+d'interroger le site distant. Des synonymes, par exemple \code{assets_pau} ou
+\code{assets_cergy}, masquent la syntaxe distante \code{@lien_pau} ou
+\code{@lien_cergy}.
+
+\subsection{Vues globales}
+
+Les vues globales fournissent une vision consolidee :
+
+\begin{longtable}{p{4.5cm}p{9.5cm}}
+\toprule
+\textbf{Vue globale} & \textbf{Role} \\
+\midrule
+\code{V_ASSETS_GLOBAL} & Inventaire Cergy + Pau avec indication du fragment. \\
+\code{V_USERS_GLOBAL} & Utilisateurs des deux sites. \\
+\code{V_STATS_GLOBAL} & Statistiques agregees par site. \\
+\code{V_TICKETS_GLOBAL} & Tickets consolides. \\
+\bottomrule
+\end{longtable}
+
+Cette approche montre le principe classique d'une BDDR : les applications
+locales travaillent sur leur fragment, tandis que les besoins de reporting
+passent par des vues globales.
+
+\subsection{Transfert inter-sites}
+
+La procedure \code{SP_TRANSFERT_MATERIEL} represente le traitement cle de la
+BDDR. Son role est de deplacer un materiel d'un site vers l'autre. Dans une
+situation locale, le changement peut se limiter a la mise a jour de
+\code{assets.site_id}. Dans un cas inter-sites, le transfert doit tenir compte
+du fragment distant :
+
+\begin{enumerate}
+  \item identifier le site courant du materiel ;
+  \item identifier le site cible ;
+  \item recopier ou mettre a jour le materiel dans le fragment distant ;
+  \item deplacer les dependances utiles, notamment ports reseau, adresses IP,
+  tickets, affectations et suivis ;
+  \item supprimer l'ancien fragment local lorsque le transfert est termine.
+\end{enumerate}
+
+Cette logique illustre le probleme central des BDDR : une operation metier
+simple en apparence peut impliquer plusieurs objets repartis et doit preserver
+l'integrite referentielle.
+
+\section{Integrite, securite et droits}
+
+\subsection{Contraintes relationnelles}
+
+L'integrite est d'abord assuree par le schema relationnel :
+
+\begin{itemize}
+  \item les cles primaires identifient chaque ligne ;
+  \item les cles etrangeres imposent la coherence entre domaines ;
+  \item les contraintes \code{UNIQUE} evitent les doublons fonctionnels ;
+  \item les contraintes \code{CHECK} encadrent les valeurs enumerees comme
+  \code{asset_type}, \code{status} ou \code{priority}.
+\end{itemize}
+
+La contrainte \code{UNIQUE(site_id, serial_number)} sur \code{assets} remplace
+avantageusement un trigger de verification de serial, car elle evite les
+problemes de table mutante et laisse Oracle garantir l'unicite directement.
+
+\subsection{Roles Oracle}
+
+Le projet definit quatre roles principaux :
+
+\begin{longtable}{p{4cm}p{10cm}}
+\toprule
+\textbf{Role} & \textbf{Responsabilite} \\
+\midrule
+\code{ROLE_ADMIN} & Administration complete du schema et des objets. \\
+\code{ROLE_TECHNICIEN} & Consultation et actions sur le support, l'inventaire et le reseau. \\
+\code{ROLE_CONSULTANT} & Lecture des vues metier. \\
+\code{ROLE_MANAGER_SITE} & Suivi des donnees et indicateurs du site. \\
+\bottomrule
+\end{longtable}
+
+Ces roles separents les usages : administration, intervention technique,
+consultation et pilotage local.
+
+\subsection{Audit et archivage}
+
+L'audit est realise par \code{TRG_AUDIT_ASSETS}, qui journalise les operations
+sur les materiels. L'archivage est realise par
+\code{TRG_ARCHIVE_ASSET_DELETE}, qui conserve l'etat final d'un materiel avant
+suppression.
+
+Ce mecanisme repond a deux besoins :
+
+\begin{itemize}
+  \item garder une trace des modifications importantes ;
+  \item pouvoir expliquer ce qui est arrive a un materiel supprime ou transfere.
+\end{itemize}
+
+\section{Optimisation physique}
+
+\subsection{Tablespaces}
+
+Le projet separe les donnees dans plusieurs tablespaces :
+
+\begin{longtable}{p{4cm}p{9.5cm}}
+\toprule
+\textbf{Tablespace} & \textbf{Utilisation} \\
+\midrule
+\code{TS_MATERIEL} & Inventaire et donnees associees aux assets. \\
+\code{TS_UTILISATEURS} & Utilisateurs, profils et groupes. \\
+\code{TS_RESEAU} & Ports, sous-reseaux et adresses IP. \\
+\code{TS_SUPPORT} & Tickets et suivis support. \\
+\code{TS_INDEX} & Index et structures d'optimisation. \\
+\bottomrule
+\end{longtable}
+
+Cette separation rend l'organisation physique plus claire et permet de
+presenter une logique d'administration Oracle : stockage par domaine,
+surveillance des volumes et isolation des index.
+
+\subsection{Clusters}
+
+Les clusters regroupent physiquement des lignes souvent lues ensemble. Le
+projet utilise trois clusters :
+
+\begin{longtable}{p{5cm}p{3cm}p{6cm}}
+\toprule
+\textbf{Cluster} & \textbf{Cle} & \textbf{Tables concernees} \\
+\midrule
+\code{cluster_user_rights} & \code{user_id} & \code{users}, \code{profiles_users}, \code{groups_users}. \\
+\code{cluster_site_structure} & \code{site_id} & \code{sites}, \code{locations}, \code{groups}, \code{ip_networks}. \\
+\code{cluster_network_port_ips} & \code{network_port_id} & \code{network_ports}, \code{ip_addresses}. \\
+\bottomrule
+\end{longtable}
+
+Le cluster \code{cluster_user_rights} est particulierement utile pour expliquer
+l'objectif : lorsqu'on consulte un utilisateur, ses profils et groupes sont des
+donnees frequemment accedees ensemble. Les regrouper physiquement peut reduire
+le nombre de lectures disque.
+
+\subsection{Index B-tree et composites}
+
+Les index B-tree couvrent les cles etrangeres et les recherches frequentes.
+Les index composites ciblent les requetes metier :
+
+\begin{itemize}
+  \item \code{idx_assets_site_type} pour l'inventaire par site et type ;
+  \item \code{idx_assets_site_state} pour l'inventaire par site et etat ;
+  \item \code{idx_assets_site_owner} pour retrouver le materiel d'un utilisateur ;
+  \item \code{idx_ticket_site_status_priority} pour suivre les tickets ouverts
+  ou prioritaires par site ;
+  \item \code{idx_ticket_asset_status} pour analyser les tickets d'un materiel ;
+  \item \code{idx_network_site_address} pour les sous-reseaux d'un site.
+\end{itemize}
+
+\subsection{Index fonctionnels et bitmap}
+
+Les index fonctionnels facilitent les recherches insensibles a la casse :
+\code{idx_assets_name_upper}, \code{idx_assets_serial_upper},
+\code{idx_users_login_upper} et \code{idx_users_email_upper}.
+
+Les index bitmap sont utilises sur des colonnes a faible cardinalite, comme
+\code{asset_type}, \code{is_active}, \code{priority} et \code{port_type}. Ils
+sont interessants pour les requetes analytiques, notamment sur de gros volumes,
+mais doivent etre presentes avec prudence dans un contexte tres transactionnel.
+
+\section{Vues metier}
+
+\subsection{Role des vues}
+
+Les vues servent a fournir une abstraction metier au-dessus du modele
+relationnel. Elles evitent de demander aux utilisateurs ou au jury de retenir
+toutes les jointures.
+
+\begin{longtable}{p{4.8cm}p{9.2cm}}
+\toprule
+\textbf{Vue} & \textbf{Utilite} \\
+\midrule
+\code{V_INVENTAIRE_COMPLET} & Inventaire enrichi avec site, localisation, proprietaire, technicien, fabricant et etat. \\
+\code{V_MATERIEL_PAR_SITE} & Comptage des materiels par site et par type. \\
+\code{V_UTILISATEURS_PROFILS} & Utilisateurs avec profils et site d'application. \\
+\code{V_TOPOLOGIE_RESEAU} & Ports, adresses IP, sous-reseaux et VLAN. \\
+\code{V_STATISTIQUES_SITE} & Indicateurs synthetiques par site. \\
+\code{V_MATERIEL_RECENT} & Materiels modifies recemment. \\
+\code{V_TICKETS_SUPPORT} & Tickets enrichis avec demandeur, categorie, groupe et materiel. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Exemple : inventaire complet}
+
+\code{V_INVENTAIRE_COMPLET} est la vue la plus importante pour la
+demonstration. Elle montre directement l'interet de la table \code{assets} :
+une seule vue suffit pour lister l'ensemble du parc, quel que soit le type de
+materiel.
+
+\section{Logique metier PL/SQL}
+
+\subsection{Procedures}
+
+\begin{longtable}{p{5cm}p{9cm}}
+\toprule
+\textbf{Procedure} & \textbf{Role} \\
+\midrule
+\code{SP_TRANSFERT_MATERIEL} & Transfert local ou inter-sites d'un materiel. \\
+\code{SP_AFFECTER_PROFIL} & Affectation ou mise a jour d'un profil utilisateur. \\
+\code{SP_CREER_TICKET_MATERIEL} & Creation d'un ticket sur un asset existant du site. \\
+\code{SP_ASSIGNER_TECH_TICKET} & Affectation d'un technicien a un ticket. \\
+\code{SP_INVENTAIRE_SITE} & Affichage synthetique de l'inventaire d'un site. \\
+\code{SP_NETTOYER_ARCHIVES} & Suppression des archives trop anciennes. \\
+\code{SP_GENERER_JEU_DE_TEST} & Generation d'un jeu de donnees representatif. \\
+\code{SP_REPLIQUER_REFERENTIELS} & Procedure de demonstration liee a la BDDR. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Fonctions}
+
+\begin{longtable}{p{5cm}p{9cm}}
+\toprule
+\textbf{Fonction} & \textbf{Role} \\
+\midrule
+\code{FN_COMPTER_MATERIEL_SITE} & Compte les assets d'un site. \\
+\code{FN_CALCULER_TAUX_UTILISATION} & Calcule le taux d'utilisation reseau d'un asset. \\
+\code{FN_OBTENIR_SITE_ENTITE} & Retrouve le code site associe a une entite. \\
+\code{FN_VERIFIER_QUOTA_MATERIEL} & Verifie si un quota de materiel est depasse. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Triggers}
+
+\begin{longtable}{p{5.2cm}p{3.2cm}p{5.5cm}}
+\toprule
+\textbf{Trigger} & \textbf{Table} & \textbf{Role} \\
+\midrule
+\code{TRG_AUTO_DATE_MOD_ASSETS} & \code{assets} & Mise a jour de \code{updated_at}. \\
+\code{TRG_AUTO_DATE_MOD_USERS} & \code{users} & Mise a jour de \code{updated_at}. \\
+\code{TRG_AUTO_DATE_MOD_NETPORTS} & \code{network_ports} & Mise a jour de \code{updated_at}. \\
+\code{TRG_AUTO_DATE_MOD_TICKETS} & \code{tickets} & Gestion des dates du workflow ticket. \\
+\code{TRG_CHECK_TICKET_USER_TECH} & \code{ticket_users} & Controle qu'un technicien affecte possede le bon profil. \\
+\code{TRG_AUDIT_ASSETS} & \code{assets} & Journalisation des modifications d'inventaire. \\
+\code{TRG_ARCHIVE_ASSET_DELETE} & \code{assets} & Archivage JSON avant suppression. \\
+\code{TRG_CASCADE_SITE_CODE} & \code{sites} & Propagation d'un changement de code site. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Interet pedagogique du PL/SQL}
+
+Le PL/SQL montre que la base ne se limite pas a stocker des donnees. Elle porte
+aussi des regles :
+
+\begin{itemize}
+  \item automatiser les dates de modification ;
+  \item empecher certaines affectations incoherentes ;
+  \item produire des indicateurs ;
+  \item encapsuler les operations sensibles comme la creation d'un ticket ou le
+  transfert d'un materiel.
+\end{itemize}
+
+\section{Jeu de donnees et demonstration}
+
+\subsection{Generation des donnees}
+
+Le script \code{09_test_data.sql} cree la procedure
+\code{SP_GENERER_JEU_DE_TEST}. Elle genere un volume de donnees suffisant pour
+tester les vues et les performances :
+
+\begin{itemize}
+  \item sites Cergy et Pau ;
+  \item localisations ;
+  \item utilisateurs ;
+  \item profils, groupes et affectations ;
+  \item assets de plusieurs types ;
+  \item tickets, techniciens et suivis ;
+  \item ports reseau, sous-reseaux et adresses IP.
+\end{itemize}
+
+Le jeu de test permet de montrer les requetes sans saisir manuellement des
+dizaines de lignes pendant la soutenance.
+
+\subsection{Scenario de demonstration}
+
+Une demonstration efficace peut suivre cet ordre :
+
+\begin{enumerate}
+  \item presenter le MCD et expliquer la centralite de \code{assets} ;
+  \item montrer le MLD et les contraintes principales ;
+  \item executer les vues metier, notamment \code{V_INVENTAIRE_COMPLET} et
+  \code{V_TICKETS_SUPPORT} ;
+  \item creer un ticket avec \code{SP_CREER_TICKET_MATERIEL} ;
+  \item afficher l'audit ou les dates modifiees par trigger ;
+  \item montrer les schemas \code{GLPI_CERGY} et \code{GLPI_PAU} ;
+  \item interroger une vue globale BDDR ;
+  \item expliquer le benchmark avec index visibles puis invisibles.
+\end{enumerate}
+
+\section{Analyse des performances}
+
+\subsection{Protocole}
+
+Le protocole presente dans les slides repose sur l'idee suivante :
+
+\begin{enumerate}
+  \item injecter un volume important de donnees avec \code{SP_GENERER_JEU_DE_TEST} ;
+  \item vider ou neutraliser autant que possible les effets du cache Oracle
+  pour obtenir des mesures comparables ;
+  \item executer les requetes representatives ;
+  \item comparer les resultats avec index visibles et index invisibles ;
+  \item stocker les mesures dans \code{benchmark_results}.
+\end{enumerate}
+
+\subsection{Requetes representatives}
+
+Les benchmarks visent les usages principaux :
+
+\begin{itemize}
+  \item recherche d'un asset par nom ;
+  \item recherche par numero de serie ;
+  \item inventaire d'un site par type ;
+  \item tickets ouverts par site, statut et priorite ;
+  \item topologie reseau d'un materiel ;
+  \item droits d'un utilisateur via profils et groupes.
+\end{itemize}
+
+\subsection{Resultats de test}
+
+Le tableau suivant reprend les mesures obtenues pendant les tests. Chaque
+requete a ete executee dans deux scenarios : avec les index actifs, puis sans
+les index. Les temps sont exprimes en millisecondes.
+
+\begin{longtable}{p{1.3cm}p{6.4cm}p{2.6cm}p{2.6cm}}
+\toprule
+\textbf{ID} & \textbf{Requete testee} & \textbf{Avec index} & \textbf{Sans index} \\
+\midrule
+\code{Q1} & Recherche materiel par nom & 10 ms & 30 ms \\
+\code{Q2} & Inventaire par site et categorie & 50 ms & 260 ms \\
+\code{Q3} & Tickets ouverts par priorite & 20 ms & 30 ms \\
+\code{Q4} & Recherche materiel par numero de serie & 0 ms & 40 ms \\
+\code{Q5} & Reseau des appareils & 190 ms & 220 ms \\
+\code{Q6} & Utilisateurs avec profils & 10 ms & 30 ms \\
+\bottomrule
+\end{longtable}
+
+Ces resultats confirment que les index sont surtout efficaces sur les recherches
+selectives et les inventaires filtres. Le gain le plus visible concerne
+\code{Q2}, ou l'inventaire par site et categorie passe de 260 ms sans index a
+50 ms avec index. Les requetes reseau, comme \code{Q5}, profitent moins des
+index car elles reposent davantage sur des jointures et sur un volume de lignes
+plus important.
+
+\subsection{Interpretation attendue}
+
+Les index doivent ameliorer surtout les recherches selectives et les filtres
+frequents. Les index composites sont utiles quand les colonnes sont utilisees
+ensemble, par exemple \code{site_id}, \code{status} et \code{priority} pour les
+tickets. Les clusters deviennent interessants lorsque plusieurs tables sont
+lues ensemble de maniere repetee, comme les droits utilisateurs.
+
+Le resultat attendu n'est pas seulement un temps plus faible. Il faut aussi
+montrer que chaque index correspond a un usage metier. Un index inutile coute de
+l'espace et ralentit les insertions ; un bon index accelere une requete
+importante et justifie son cout de maintenance.
+
+\section{Limites et ameliorations possibles}
+
+\subsection{Limites du projet}
+
+Le projet reste une simplification. Certaines fonctionnalites completes de GLPI
+ne sont pas modelisees :
+
+\begin{itemize}
+  \item contrats, fournisseurs, licences logicielles et budgets ;
+  \item historique complet de tous les objets ;
+  \item droits fins comparables au moteur GLPI reel ;
+  \item synchronisation BDDR reelle entre deux serveurs physiques ;
+  \item resolution automatique des conflits inter-sites.
+\end{itemize}
+
+\subsection{Ameliorations}
+
+Plusieurs evolutions sont possibles :
+
+\begin{itemize}
+  \item separer la demonstration locale et une version multi-instances Oracle ;
+  \item ajouter des materialized views pour certains rapports globaux ;
+  \item enrichir l'audit avec le contexte applicatif ;
+  \item ajouter une table de mouvements d'inventaire pour tracer les transferts ;
+  \item comparer les plans d'execution avant et apres chaque index ;
+  \item automatiser la generation d'un rapport de benchmark.
+\end{itemize}
+
+\section{Conclusion}
+
+Le projet aboutit a une base Oracle coherente et defendable. La refonte
+simplifiee conserve les idees essentielles de GLPI tout en supprimant la
+complexite non necessaire au cadre pedagogique. La table \code{assets} rend
+l'inventaire lisible, les vues fournissent une abstraction metier, la BDDR
+illustre la fragmentation Cergy/Pau, et le PL/SQL ajoute les regles de gestion
+attendues.
+
+La proposition est donc pertinente pour une soutenance : elle montre a la fois
+la modelisation, l'administration Oracle, la distribution des donnees, la
+securite, l'integrite, les traitements stockes et l'optimisation des
+performances. Le modele n'est pas une copie exhaustive de GLPI ; c'est une
+version volontairement recentree, plus facile a expliquer et a tester.
+
+\appendix
+
+\section{Annexe A - Dictionnaire synthetique des tables}
+
+\begin{longtable}{p{3.6cm}p{10.4cm}}
+\toprule
+\textbf{Table} & \textbf{Description} \\
+\midrule
+\code{sites} & Sites, campus et structures logiques. \\
+\code{locations} & Emplacements physiques rattaches aux sites. \\
+\code{manufacturers} & Fabricants des equipements. \\
+\code{states} & Etats fonctionnels des equipements. \\
+\code{users} & Utilisateurs, demandeurs, techniciens et responsables. \\
+\code{profiles} & Profils applicatifs. \\
+\code{profiles_users} & Affectation des profils aux utilisateurs selon le site. \\
+\code{groups} & Groupes de support ou d'organisation. \\
+\code{groups_users} & Membres des groupes. \\
+\code{assets} & Inventaire centralise des materiels. \\
+\code{ticket_categories} & Categories de tickets. \\
+\code{tickets} & Demandes et incidents. \\
+\code{ticket_users} & Techniciens affectes aux tickets. \\
+\code{ticket_followups} & Historique des suivis de tickets. \\
+\code{network_ports} & Ports reseau des assets. \\
+\code{ip_networks} & Sous-reseaux IP et VLAN. \\
+\code{ip_addresses} & Adresses IP rattachees aux ports. \\
+\code{audit_log} & Journal d'audit. \\
+\code{archives_materiel} & Archives JSON des materiels supprimes. \\
+\bottomrule
+\end{longtable}
+
+\section{Annexe B - Ordre d'execution des scripts}
+
+\begin{Verbatim}[fontsize=\small, frame=single]
+01_tablespaces.sql
+02_schema_tables.sql
+04_clusters_indexes.sql
+03_users_roles.sql
+05_views.sql
+06_plsql/triggers.sql
+06_plsql/procedures.sql
+06_plsql/functions.sql
+06_plsql/cursors.sql
+09_test_data.sql
+08_query_plans.sql
+10_benchmark.sql
+07_bddr.sql
+\end{Verbatim}
+
+\end{document}
