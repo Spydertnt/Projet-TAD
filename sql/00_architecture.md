@@ -20,20 +20,7 @@ Les schemas d'architecture et de MCD sont generes par `scripts/generate_diagrams
 
 ## 3. MCD simplifie
 
-![MCD simplifie](../docs/diagrams/mcd.svg)
-
-## 3.1 Diagramme UML
-
-Le diagramme UML reprend le meme perimetre que le MCD, mais sous forme de classes metier avec les attributs principaux, quelques operations significatives et les multiplicites d'association.
-
-![Diagramme UML](../docs/diagrams/uml.svg)
-
-Pour regenerer les schemas apres une modification du modele :
-
-```bash
-python scripts/generate_diagrams.py
-python scripts/generate_uml_diagram.py
-```
+![MCD simplifie](../docs/diagrams/mcd.pdf)
 
 ## 4. MLD
 

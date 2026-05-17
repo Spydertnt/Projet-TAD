@@ -39,8 +39,12 @@ La BDDR est simulee sur un seul PC avec deux utilisateurs Oracle locaux.
 Projet-TAD/
 |-- README.md
 |-- docs/
-|   `-- diagrams/
-|       |-- architecture.svg
+|   '-- diagrams/
+|       |-- architecture.pdf
+|       |-- mcd.pdf
+|   |-- documentation_technique.pdf
+|   |-- mld.pdf
+|   |-- rapport_complet.pdf
 `-- sql/
     |-- 00_architecture.md
     |-- 00_run_all.sql
@@ -50,6 +54,10 @@ Projet-TAD/
     |-- 04_clusters_indexes.sql
     |-- 05_views.sql
     |-- 06_plsql/
+    |   |-- cursors.sql
+    |   |-- functions.sql
+    |   |-- procedures.sql
+    |   '-- triggers.sql
     |-- 07_bddr.sql
     |-- 08_query_plans.sql
     |-- 09_test_data.sql
